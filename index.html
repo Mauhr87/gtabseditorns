@@ -447,6 +447,26 @@ body.play-mode .measure-card {
   color: #625b54;
   font-size: 12px;
 }
+.g-toast {
+  position: fixed;
+  bottom: 80px;
+  right: 24px;
+  background: #1c1917;
+  color: #fff;
+  border-radius: 8px;
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.2s;
+  z-index: 10000;
+  max-width: 320px;
+  pointer-events: none;
+}
+.g-toast.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.g-toast.error { background: #7f1d1d; }
 .backing-audio {
   display: none;
 }
@@ -958,6 +978,7 @@ let backingTrackBlob = null;
 let backingStartSec = 0;
 let tabDelaySec     = 0;
 let backingEnabled  = false; // OFF por default — se activa al cargar backing
+let backingOriginalBpm = 0;  // BPM when backing was loaded — 0 = not set
 let backingVolume   = 0.8;   // 0..1
 let arrangement = [];
 let currentMeasure = 1;
@@ -1574,6 +1595,41 @@ function getBpm() {
   return Math.max(35, Math.min(180, Number(document.getElementById('bpm-input')?.value || 70)));
 }
 function measureSeconds() { return (60 / getBpm()) * 4; }
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let _toastTimer = null;
+function showToast(msg, isError = false, duration = 3500) {
+  const el = document.getElementById('g-toast');
+  if (!el) return;
+  clearTimeout(_toastTimer);
+  el.textContent = msg;
+  el.className = 'g-toast show' + (isError ? ' error' : '');
+  _toastTimer = setTimeout(() => { el.className = 'g-toast'; }, duration);
+}
+
+// ── BPM lock helpers ──────────────────────────────────────────────────────────
+function backingBpmMismatch() {
+  if (!backingAudioBuffer || backingOriginalBpm <= 0) return false;
+  return getBpm() !== backingOriginalBpm;
+}
+
+function forceDisableBacking() {
+  if (!backingAudioBuffer || !backingEnabled) return;
+  backingEnabled = false;
+  const btn     = document.getElementById('backing-toggle-btn');
+  const section = document.getElementById('backing-section');
+  if (btn)     btn.classList.remove('active');
+  if (section) section.classList.remove('visible');
+  updateBackingSection();
+  showToast('⚠️ Backing desactivado — tempo cambiado. Original: ' + backingOriginalBpm + ' BPM', true);
+}
+
+function checkBackingBpm() {
+  if (!backingAudioBuffer) return;
+  if (backingOriginalBpm <= 0) { backingOriginalBpm = getBpm(); return; }
+  if (getBpm() !== backingOriginalBpm && backingEnabled) forceDisableBacking();
+  updateBackingSection();
+}
 function slotSeconds()    { return measureSeconds() / 8; }
 
 // ─────────────────────────────────────────────────────────────
@@ -1615,6 +1671,7 @@ async function decodeBackingBlob(blob) {
     backingGainNode.gain.value = backingVolume;
     backingGainNode.connect(ac.destination);
   }
+  if (backingOriginalBpm <= 0) backingOriginalBpm = getBpm();
   setStatus(`Backing decodificado (${backingAudioBuffer.duration.toFixed(1)}s). Ajusta los offsets y guarda.`);
 }
 
@@ -1649,6 +1706,12 @@ function startBackingAt(fromSeconds, atAudioTime) {
 function loadBackingTrack(event) {
   const file = event.target.files?.[0];
   if (!file) return;
+  // Block load if a backing was previously set and BPM was changed
+  if (backingOriginalBpm > 0 && getBpm() !== backingOriginalBpm) {
+    showToast('⚠️ Restablece el tempo a ' + backingOriginalBpm + ' BPM antes de cargar el backing track', true);
+    event.target.value = '';
+    return;
+  }
   if (backingTrackUrl) URL.revokeObjectURL(backingTrackUrl);
   backingTrackBlob = file;
   backingTrackUrl = URL.createObjectURL(file);
@@ -1669,23 +1732,38 @@ function loadBackingTrack(event) {
 // ── Offset setters ────────────────────────────────────────────
 // Pill toggle: activa/desactiva backing Y muestra/oculta el panel a la vez
 function toggleBacking() {
+  if (!backingEnabled && backingBpmMismatch()) {
+    showToast('⚠️ Para activar el backing track restablece el tempo a ' + backingOriginalBpm + ' BPM', true);
+    return;
+  }
+  // Parar siempre primero para evitar desync
+  if (playing) stopPlay();
   backingEnabled = !backingEnabled;
   const btn     = document.getElementById('backing-toggle-btn');
   const section = document.getElementById('backing-section');
   if (btn)     btn.classList.toggle('active', backingEnabled);
   if (section) section.classList.toggle('visible', backingEnabled);
   setStatus(backingEnabled ? 'Backing activado.' : 'Backing desactivado — solo guitarra guía.');
-  // Si está en play: parar siempre (al activar o desactivar) para resync
-  if (playing) stopPlay();
+  updateBackingSection();
 }
 
 function updateBackingSection() {
   if (!document.body) return;
   const hasFile   = !!backingTrackBlob;
+  const locked    = backingBpmMismatch();
   const loadBtn   = document.getElementById('load-backing-btn');
   const toggleBtn = document.getElementById('backing-toggle-btn');
   if (loadBtn)   loadBtn.style.display   = hasFile ? 'none'        : '';
-  if (toggleBtn) toggleBtn.style.display = hasFile ? 'inline-flex' : 'none';
+  if (toggleBtn) {
+    toggleBtn.style.display = hasFile ? 'inline-flex' : 'none';
+    if (locked) {
+      toggleBtn.textContent = '🔒 Backing';
+      toggleBtn.style.opacity = '0.6';
+    } else {
+      toggleBtn.textContent = '🎵 Backing';
+      toggleBtn.style.opacity = '';
+    }
+  }
   const label = document.getElementById('backing-name-label');
   if (label) label.textContent = backingTrackName || '—';
   // Al cargar un backing nuevo: panel visible, backing OFF por default
@@ -2344,7 +2422,10 @@ async function loadLibrarySong(id) {
   arrangement    = item.arrangement || [];
   currentMeasure = 1;
   document.getElementById('capo-select').value        = String(capo);
-  if (item.bpm) document.getElementById('bpm-input').value = String(item.bpm);
+  if (item.bpm) {
+    document.getElementById('bpm-input').value = String(item.bpm);
+    if (backingAudioBuffer) backingOriginalBpm = Number(item.bpm);
+  }
   document.getElementById('backing-start-input').value = backingStartSec.toFixed(2);
   document.getElementById('tab-delay-input').value     = tabDelaySec.toFixed(2);
   closeLibraryDialog();
@@ -2424,7 +2505,10 @@ function loadJsonFile(file) {
       tabDelaySec      = Number(data.tabDelaySec ?? 0);
 
       document.getElementById('capo-select').value = String(capo);
-      if (data.bpm) document.getElementById('bpm-input').value = String(data.bpm);
+      if (data.bpm) {
+        document.getElementById('bpm-input').value = String(data.bpm);
+        backingOriginalBpm = Number(data.bpm);
+      }
 
       enterPlayMode();
       setStatus(`"${songTitle}" importado y guardado en biblioteca (${arrangement.length} compases).`);
@@ -2499,5 +2583,15 @@ window.addEventListener('load', () => {
   setMode('empty');
 });
 </script>
+  <div class="g-toast" id="g-toast"></div>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const bpmEl = document.getElementById('bpm-input');
+    if (bpmEl) {
+      bpmEl.addEventListener('input',  function() { checkBackingBpm(); });
+      bpmEl.addEventListener('change', function() { checkBackingBpm(); });
+    }
+  });
+  </script>
 </body>
 </html>
