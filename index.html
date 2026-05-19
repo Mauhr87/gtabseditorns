@@ -1,0 +1,2503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guitar Arrangement Builder v2</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink: #26231f;
+  --muted: #736d64;
+  --line: #d9d1c7;
+  --paper: #fffdf9;
+  --panel: #f6f1ea;
+  --green: #0f766e;
+  --blue: #2563eb;
+  --purple: #7c3aed;
+}
+body {
+  height: 100vh;
+  overflow: hidden;
+  font-family: Georgia, serif;
+  background: #f7f4ef;
+  color: var(--ink);
+}
+#app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.topbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+.title { font-size: 20px; font-weight: 800; line-height: 1.1; }
+.subtitle { margin-top: 4px; font-size: 12px; color: var(--muted); }
+.actions, .toolbar, .mode-toggle, .bottom-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.actions { justify-content: flex-end; flex-wrap: wrap; }
+.btn, select, input, textarea {
+  font-family: Georgia, serif;
+  border: 1.5px solid #4a453f;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+}
+.btn {
+  min-height: 38px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: .15s;
+}
+.btn:hover { background: #302c27; color: #fff; }
+.btn.primary { background: var(--green); border-color: var(--green); color: #fff; }
+.btn.primary:hover { background: #115e59; }
+.btn.icon { min-width: 42px; padding: 7px 10px; font-size: 18px; }
+.mode-toggle {
+  padding: 3px;
+  border: 1.5px solid #4a453f;
+  border-radius: 999px;
+  background: #f2eee7;
+}
+.mode-toggle button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  padding: 7px 13px;
+  cursor: pointer;
+  font-family: Georgia, serif;
+  font-weight: 700;
+  color: #5c554d;
+}
+.mode-toggle button.active { background: var(--ink); color: #fff; }
+.toolbar {
+  padding: 10px 16px;
+  background: #fbfaf7;
+  border-bottom: 1px solid #e5ded4;
+  flex-wrap: wrap;
+}
+.control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #57514b;
+  font-size: 13px;
+}
+select, input { min-height: 34px; padding: 6px 8px; }
+.workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 150px 1fr;
+}
+body:not(.play-mode) .workspace {
+  grid-template-rows: 320px 1fr;
+}
+.chord-strip {
+  background: #fdfbf8;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 12px 14px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.measure-card {
+  width: 150px;
+  min-width: 150px;
+  max-height: 292px;
+  border: 1.5px solid #d7cec2;
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px;
+  cursor: pointer;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.measure-card.multi-chord {
+  width: 150px;
+  min-width: 150px;
+}
+.measure-card.active {
+  border-color: var(--purple);
+  background: #f5f0ff;
+  box-shadow: inset 0 0 0 1px rgba(124,58,237,.18);
+}
+body.play-mode .measure-card {
+  max-height: none;
+  overflow-y: hidden;
+}
+.measure-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #858077;
+  font-size: 11px;
+  font-weight: 800;
+}
+.chord-name {
+  margin-top: 5px;
+  color: #5b21b6;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+}
+.chord-name.multi {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 17px;
+}
+.chord-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: #ede9fe;
+  color: #5b21b6;
+}
+.chord-chip small {
+  color: #7b7289;
+  font-size: 10px;
+}
+.original-chord {
+  margin-top: 4px;
+  color: #8a8278;
+  font-size: 11px;
+}
+.pattern-name {
+  margin-top: 6px;
+  color: #6b6259;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.measure-edit {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+}
+.event-edit {
+  padding: 7px;
+  border: 1px solid #d8d0c4;
+  border-radius: 7px;
+  background: #fffaf2;
+}
+.event-edit-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+  color: #5f564d;
+  font-size: 12px;
+  font-weight: 800;
+}
+.event-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 5px;
+}
+.measure-edit select {
+  width: 100%;
+  min-height: 34px;
+  padding: 5px 7px;
+  font-size: 13px;
+  line-height: 1.2;
+}
+.custom-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+}
+.custom-step {
+  height: 24px;
+  border: 1px solid #c9c1b7;
+  border-radius: 4px;
+  background: #fff;
+  color: var(--blue);
+  cursor: pointer;
+  font-family: Georgia, serif;
+  font-size: 13px;
+  line-height: 1;
+}
+.tab-panel {
+  min-height: 0;
+  overflow: auto;
+  padding: 22px 20px 80px;
+  background: var(--paper);
+  scroll-behavior: smooth;
+}
+.tab-system {
+  min-width: max-content;
+  padding-bottom: 18px;
+}
+.measure-number-row, .beat-row, .rhythm-row, .tab-line {
+  display: grid;
+  grid-template-columns: 28px repeat(var(--cols), 28px);
+  min-width: max-content;
+}
+.measure-number-cell, .beat-cell, .rhythm-cell {
+  height: 20px;
+  text-align: center;
+  font-size: 12px;
+  color: #777;
+}
+.measure-number-cell {
+  height: 18px;
+  color: #756f68;
+  font-weight: 900;
+}
+.rhythm-cell {
+  color: var(--purple);
+  font-weight: 900;
+}
+.rhythm-cell.string-step {
+  color: #7c3aed;
+  font-size: 11px;
+}
+.rhythm-cell.string-step::before {
+  content: "c";
+  font-size: 9px;
+  color: #9a8fb4;
+  margin-right: 1px;
+}
+.rhythm-cell.strum-step {
+  color: #8b5cf6;
+}
+.string-label {
+  height: 24px;
+  color: #667085;
+  font-size: 13px;
+  text-align: right;
+  padding: 3px 8px 0 0;
+}
+.tab-cell {
+  height: 24px;
+  border-top: 1px solid #8b8580;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+.tab-cell.bar { border-left: 2px solid #2e2b27; }
+.tab-cell.active-measure { background: rgba(124,58,237,.055); }
+.tab-cell span {
+  min-width: 14px;
+  text-align: center;
+  background: #fffdf9;
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: 800;
+}
+.tab-cell.chord span { color: #047857; }
+.tab-cell.arp span { color: #9a3412; background: #fff2cc; }
+.tab-cell.melody span { color: #1d4ed8; background: #dbeafe; }
+.tab-cell.muted span { color: #999; }
+
+/* ── Beat bar en tarjetas ── */
+.beat-bar-wrap {
+  margin-top: 6px;
+  width: 100%;
+  overflow: hidden;
+}
+.bar-chord-row {
+  position: relative;
+  height: 28px;
+  margin-bottom: 3px;
+  width: 100%;
+}
+.bar-chord-label {
+  position: absolute;
+  top: 0;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90%;
+}
+.bar-chord-label.evt-0 { color: #5b21b6; }
+.bar-chord-label.evt-1 { color: #065f46; }
+.bar-chord-label.evt-2 { color: #92400e; }
+.bar-chord-label.evt-3 { color: #1e3a8a; }
+.beat-bar {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  height: 26px;
+  position: relative;
+  width: 100%;
+}
+.beat-slot {
+  border-radius: 3px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 2px;
+  font-size: 9px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.8);
+  min-width: 0;
+}
+.beat-slot.evt-0 { background: #b191e8; }
+.beat-slot.evt-1 { background: #4a9a94; }
+.beat-slot.evt-2 { background: #b45309; }
+.beat-slot.evt-3 { background: #1d4ed8; }
+.beat-slot.strong { opacity: 1; }
+.beat-slot.weak   { opacity: 0.7; }
+.beat-cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #fff;
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(255,255,255,.9);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 2;
+}
+.bottom-bar {
+  height: auto;
+  min-height: 48px;
+  flex: 0 0 auto;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 16px;
+  background: #e5dfd3;
+  border-top: 1px solid #d8d0c4;
+  gap: 6px;
+}
+.bottom-bar.disabled {
+  opacity: .45;
+  pointer-events: none;
+}
+.bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+/* Backing row — hidden by default, shown via JS toggle */
+#backing-section {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  padding-top: 4px;
+  border-top: 1px solid #d0c9bf;
+}
+#backing-section.visible { display: flex; }
+/* Backing toggle button */
+.backing-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 1.5px solid #4a453f;
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+  font-family: Georgia, serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #57514b;
+  white-space: nowrap;
+  transition: .15s;
+}
+.backing-toggle.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+.backing-name {
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: italic;
+}
+.status {
+  min-width: 260px;
+  color: #625b54;
+  font-size: 12px;
+}
+.backing-audio {
+  display: none;
+}
+dialog {
+  border: 0;
+  border-radius: 10px;
+  padding: 0;
+  box-shadow: 0 24px 80px rgba(0,0,0,.28);
+  width: min(720px, calc(100vw - 36px));
+}
+.library-list {
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+.library-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #ddd6cc;
+  border-radius: 8px;
+  background: #fff;
+}
+.library-title {
+  font-weight: 800;
+}
+.library-meta {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+dialog::backdrop { background: rgba(20,18,15,.38); }
+.dialog-body { padding: 18px; background: #fffdf9; }
+.dialog-body h2 { font-size: 22px; margin-bottom: 8px; }
+.dialog-body p { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+textarea {
+  width: 100%;
+  height: 220px;
+  padding: 10px;
+  line-height: 1.45;
+  resize: vertical;
+  font-size: 15px;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+body.play-mode .measure-edit { display: none; }
+
+/* ── Empty state ── */
+#empty-workspace { display: none; }
+body.empty-mode #empty-workspace { display: flex; }
+body.empty-mode .chord-strip,
+body.empty-mode .tab-panel { display: none; }
+body.empty-mode .bottom-bar { display: none; }
+body.empty-mode .toolbar { display: none; }
+
+.dropzone {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  height: 100vh;
+  background: var(--paper);
+}
+.dropzone-header {
+  text-align: center;
+}
+.dropzone-header h2 {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.dropzone-header p {
+  font-size: 14px;
+  color: var(--muted);
+}
+.dropzone-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: min(460px, calc(100vw - 48px));
+  padding: 44px 36px;
+  border: 2px dashed #ccc5bc;
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .18s, background .18s, box-shadow .18s;
+  text-align: center;
+  user-select: none;
+}
+.dropzone-box:hover, .dropzone-box.drag-over {
+  border-color: var(--purple);
+  background: #f9f6ff;
+  box-shadow: 0 0 0 4px rgba(124,58,237,.08);
+}
+.dropzone-icon {
+  font-size: 44px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.dropzone-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.dropzone-sub {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.dropzone-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(460px, calc(100vw - 48px));
+  color: var(--muted);
+  font-size: 12px;
+}
+.dropzone-divider::before,
+.dropzone-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.dropzone-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: min(460px, calc(100vw - 48px));
+}
+.dropzone-actions .btn {
+  flex: 1;
+  min-width: 160px;
+  justify-content: center;
+  font-size: 14px;
+}
+
+
+/* ── Play / Stop transport buttons ─────────────────────── */
+.play-btn {
+  background: var(--purple);
+  border-color: var(--purple);
+  color: #fff;
+  font-size: 20px;
+  min-width: 48px;
+  min-height: 42px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.play-btn:hover { background: #5b21b6; border-color: #5b21b6; color: #fff; }
+.stop-btn {
+  background: #4a453f;
+  border-color: #4a453f;
+  color: #fff;
+  font-size: 16px;
+  min-width: 38px;
+  min-height: 42px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.stop-btn:hover { background: #302c27; border-color: #302c27; color: #fff; }
+/* ── Library drawer ─────────────────────────────────────── */
+.lib-overlay {
+  position: fixed; inset: 0;
+  background: rgba(20,18,15,.38);
+  z-index: 199;
+  opacity: 0; pointer-events: none;
+  transition: opacity .22s;
+}
+.lib-overlay.open { opacity: 1; pointer-events: auto; }
+.lib-drawer {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: min(420px, 100vw);
+  background: #fffdf9;
+  border-left: 1.5px solid var(--line);
+  box-shadow: -10px 0 40px rgba(0,0,0,.18);
+  transform: translateX(110%);
+  transition: transform .25s cubic-bezier(.4,0,.2,1);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.lib-drawer.open { transform: translateX(0); }
+.lib-drawer-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px;
+  background: #fff;
+  border-bottom: 1.5px solid var(--line);
+  flex-shrink: 0;
+}
+.lib-drawer-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 18px; font-weight: 800; color: var(--purple);
+}
+.lib-drawer-body {
+  flex: 1; overflow-y: auto;
+  padding: 14px 18px 24px;
+}
+.lib-drawer-body p {
+  color: var(--muted); font-size: 13px; margin-bottom: 12px;
+}
+/* ── Settings dropdown ──────────────────────────────────── */
+.settings-wrap { position: relative; }
+.settings-panel {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  background: #fff;
+  border: 1.5px solid #4a453f;
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.18);
+  padding: 6px;
+  min-width: 190px;
+  z-index: 150;
+  display: none;
+  flex-direction: column;
+  gap: 3px;
+}
+.settings-panel.open { display: flex; }
+.settings-panel .btn {
+  text-align: left;
+  width: 100%;
+  white-space: nowrap;
+  font-size: 13px;
+  min-height: 34px;
+  padding: 6px 10px;
+}
+/* ── Biblioteca button ──────────────────────────────────── */
+.btn.biblioteca {
+  background: var(--purple);
+  border-color: var(--purple);
+  color: #fff;
+  display: flex; align-items: center; gap: 6px;
+}
+.btn.biblioteca:hover { background: #5b21b6; border-color: #5b21b6; }
+/* ── Backing volume ─────────────────────────────────────── */
+.backing-vol {
+  display: flex; align-items: center; gap: 6px;
+  color: #57514b; font-size: 13px;
+}
+.backing-vol input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  width: 80px; height: 4px;
+  background: #d0c9bf; border-radius: 2px;
+  border: none; padding: 0; min-height: unset; cursor: pointer;
+  accent-color: var(--green);
+}
+
+@media (max-width: 900px) {
+  .topbar { grid-template-columns: 1fr; }
+  .actions { justify-content: flex-start; }
+  .workspace { grid-template-rows: 135px 1fr; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div>
+      <div class="title" id="song-title">Guitar Arrangement Builder</div>
+      <div class="subtitle" id="subtitle">Un compas por acorde · arreglos de acompanamiento, arpegio o punteo simple</div>
+    </div>
+    <div class="actions">
+      <div class="mode-toggle" aria-label="Modo">
+        <button id="edit-mode-btn" class="active" onclick="setMode('edit')">Editar</button>
+        <button id="play-mode-btn" onclick="setMode('play')">Play</button>
+      </div>
+      <button class="btn" onclick="document.getElementById('musicxml-input').click()">Cargar MusicXML</button>
+      <input id="musicxml-input" type="file" accept=".xml,.musicxml" hidden onchange="readMusicXml(event)">
+      <input id="json-input" type="file" accept=".json" hidden onchange="importArrangement(event)">
+      <button class="btn" onclick="saveToLibrary()">Guardar</button>
+      <button class="btn biblioteca" onclick="openLibraryDrawer()">📚 Biblioteca</button>
+      <div class="settings-wrap" id="settings-wrap">
+        <button class="btn icon" id="settings-btn" onclick="toggleSettingsPanel(event)" title="Ajustes">⚙</button>
+        <div class="settings-panel" id="settings-panel">
+          <button class="btn" onclick="openChordDialog();closeSettingsPanel()">✏️ Pegar acordes</button>
+          <button class="btn" onclick="exportArrangement();closeSettingsPanel()">⬇ Descargar JSON</button>
+          <button class="btn" onclick="document.getElementById('json-input').click();closeSettingsPanel()">⬆ Importar JSON</button>
+        </div>
+      </div>
+      <button class="btn icon" onclick="toggleFullscreen()" title="Pantalla completa">⛶</button>
+    </div>
+  </header>
+
+  <section class="toolbar">
+    <div class="control">
+      <span>Capo</span>
+      <select id="capo-select" onchange="setCapo(Number(this.value))">
+        <option value="0" selected>0</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+      </select>
+    </div>
+    <div class="control">
+      <span>Compas</span>
+      <input id="measure-input" type="number" min="1" value="1" onchange="goMeasure(Number(this.value))">
+    </div>
+    <button class="btn" onclick="changeMeasure(-1)">◀</button>
+    <button class="btn" onclick="changeMeasure(1)">▶</button>
+    <div class="status" id="status">Edita cada compas: formato, patron y punto de inicio.</div>
+  </section>
+
+  <main class="workspace">
+    <!-- Empty state -->
+    <section id="empty-workspace" class="dropzone"
+      ondragover="handleDragOver(event)"
+      ondragleave="handleDragLeave(event)"
+      ondrop="handleDrop(event)">
+
+      <div class="dropzone-header">
+        <h2>🎸 Guitar Arrangement Builder</h2>
+        <p>Carga una partitura para empezar a construir tu arreglo</p>
+      </div>
+
+      <div class="dropzone-box" id="dropzone-box"
+        onclick="document.getElementById('musicxml-input').click()">
+        <div class="dropzone-icon">📄</div>
+        <div class="dropzone-title">Arrastra tu archivo MusicXML aquí</div>
+        <div class="dropzone-sub">o haz clic para buscar en tu computadora<br>.xml · .musicxml · .json</div>
+      </div>
+
+      <div class="dropzone-divider">o también</div>
+
+      <div class="dropzone-actions">
+        <button class="btn primary" onclick="openChordDialog(); event.stopPropagation()">✏️ Pegar acordes</button>
+        <button class="btn" onclick="openLibraryDrawer(); event.stopPropagation()">📚 Biblioteca</button>
+      </div>
+
+    </section>
+    <section class="chord-strip" id="chord-strip"></section>
+    <section class="tab-panel" id="tab-panel"></section>
+  </main>
+
+  <footer class="bottom-bar disabled" id="bottom-bar">
+    <div class="bar-row">
+      <button class="play-btn" id="play-btn" onclick="togglePlay()">▶</button>
+      <button class="stop-btn" id="stop-btn" onclick="stopPlay()" title="Stop y rebobinar">■</button>
+      <button class="btn" onclick="changeMeasure(-1)">◀</button>
+      <input id="play-measure-input" type="number" min="1" value="1" onchange="goMeasure(Number(this.value))" style="width:52px">
+      <span id="play-total">/ 1</span>
+      <button class="btn" onclick="changeMeasure(1)">▶</button>
+      <span class="control">BPM <input id="bpm-input" type="number" min="35" max="180" value="70" style="width:50px"></span>
+      <button class="btn" id="mute-tab-btn" onclick="toggleMuteTab()">🔇 Mutear tab</button>
+      <button class="btn" onclick="playCurrentMeasure()">Tocar compas</button>
+      <div style="width:1px;height:24px;background:#c5bdb3;margin:0 2px"></div>
+      <button class="btn" id="load-backing-btn" onclick="document.getElementById('backing-input').click()">+ Backing</button>
+      <button class="backing-toggle" id="backing-toggle-btn" onclick="toggleBacking()" style="display:none">🎵 Backing</button>
+      <input id="backing-input" type="file" accept="audio/*" hidden onchange="loadBackingTrack(event)">
+    </div>
+    <!-- Fila 2: visible solo cuando backing está ON -->
+    <div id="backing-section">
+      <span class="backing-name" id="backing-name-label">—</span>
+      <span class="control" title="Desde qué segundo del archivo arranca el backing">
+        Desde <input id="backing-start-input" type="number" step="0.01" value="0"
+               onchange="setBackingStartSec(Number(this.value))" style="width:58px">s
+      </span>
+      <span class="control" title="Cuántos segundos después del inicio del backing entra la tab">
+        Tab en <input id="tab-delay-input" type="number" step="0.01" value="0"
+                onchange="setTabDelaySec(Number(this.value))" style="width:58px">s
+      </span>
+      <button class="btn" onclick="markTabEntry()">Marcar entrada</button>
+      <button class="btn" id="preview-btn" onclick="previewBackingFromStart()">▶ Preview</button>
+      <button class="btn" onclick="document.getElementById('backing-input').click()" style="font-size:12px">↺ Cambiar</button>
+      <div class="backing-vol">
+        🔊 <input type="range" min="0" max="1" step="0.01" value="0.8"
+            id="backing-vol-slider" oninput="setBackingVolume(Number(this.value))">
+      </div>
+    </div>
+  </footer>
+  <audio id="backing-audio" class="backing-audio"></audio>
+</div>
+
+<dialog id="chord-dialog">
+  <div class="dialog-body">
+    <h2>Pegar lista de acordes</h2>
+    <p>Pega el output de Moises. Cada acorde se convierte en un compas. Puedes separar con espacios, saltos de linea o guiones.</p>
+    <textarea id="chord-text"></textarea>
+    <div class="dialog-actions">
+      <button class="btn" onclick="closeChordDialog()">Cancelar</button>
+      <button class="btn primary" onclick="applyChordText()">Crear arreglo</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Library drawer -->
+<div class="lib-overlay" id="lib-overlay" onclick="closeLibraryDrawer()"></div>
+<div class="lib-drawer" id="lib-drawer">
+  <div class="lib-drawer-header">
+    <div class="lib-drawer-title">📚 Biblioteca</div>
+    <button class="btn icon" onclick="closeLibraryDrawer()" title="Cerrar">✕</button>
+  </div>
+  <div class="lib-drawer-body">
+    <p>Arreglos guardados en este navegador.</p>
+    <div class="library-list" id="library-list"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
+<script>
+// ─────────────────────────────────────────────────────────────
+//  CONSTANTS & DATA
+// ─────────────────────────────────────────────────────────────
+const STRINGS = ['e', 'B', 'G', 'D', 'A', 'E'];
+const STRING_OPEN_MIDI = [64, 59, 55, 50, 45, 40];
+const LIBRARY_KEY = 'guitarArrangementLibrary.v1';
+const BACKING_DB = 'guitarArrangementBacking.v1';
+const BACKING_STORE = 'tracks';
+const BEAT_LABELS = ['1', '&', '2', '&', '3', '&', '4', '&'];
+const CHROMA = {
+  C: 0, 'B#': 0, 'C#': 1, Db: 1, D: 2, 'D#': 3, Eb: 3, E: 4, Fb: 4,
+  'E#': 5, F: 5, 'F#': 6, Gb: 6, G: 7, 'G#': 8, Ab: 8, A: 9, 'A#': 10, Bb: 10, B: 11, Cb: 11
+};
+const FLAT_NAMES  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const SHARP_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const SHAPES = {
+  C:  ['0','1','0','2','3','x'],
+  Cm: ['3','4','5','5','3','x'],
+  Db: ['4','6','6','6','4','x'],
+  Dbm:['4','5','6','6','4','x'],
+  'C#': ['4','6','6','6','4','x'],
+  'C#m':['4','5','6','6','4','x'],
+  D:  ['2','3','2','0','x','x'],
+  Dm: ['1','3','2','0','x','x'],
+  Eb: ['6','8','8','8','6','x'],
+  Ebm:['6','7','8','8','6','x'],
+  'D#': ['6','8','8','8','6','x'],
+  'D#m':['6','7','8','8','6','x'],
+  E:  ['0','0','1','2','2','0'],
+  Em: ['0','0','0','2','2','0'],
+  F:  ['1','1','2','3','3','1'],
+  Fm: ['1','1','1','3','3','1'],
+  Gb: ['2','2','3','4','4','2'],
+  Gbm:['2','2','2','4','4','2'],
+  'F#': ['2','2','3','4','4','2'],
+  'F#m':['2','2','2','4','4','2'],
+  G:  ['3','0','0','0','2','3'],
+  Gm: ['3','3','3','5','5','3'],
+  Ab: ['4','4','5','6','6','4'],
+  Abm:['4','4','4','6','6','4'],
+  'G#': ['4','4','5','6','6','4'],
+  'G#m':['4','4','4','6','6','4'],
+  A:  ['0','2','2','2','0','x'],
+  Am: ['0','1','2','2','0','x'],
+  Bb: ['1','3','3','3','1','x'],
+  Bbm:['1','2','3','3','1','x'],
+  'A#': ['1','3','3','3','1','x'],
+  'A#m':['1','2','3','3','1','x'],
+  B:  ['2','4','4','4','2','x'],
+  Bm: ['2','3','4','4','2','x']
+};
+const PATTERNS = {
+  ballad:      { name:'Balada ↓ ↓↑ ↑↓↑',     kind:'strum',  marks:['↓','','↓','↑','','↑','↓','↑'],  hits:[0,2,3,5,6,7] },
+  down4:       { name:'4 negras ↓ ↓ ↓ ↓',      kind:'strum',  marks:['↓','','↓','','↓','','↓',''],    hits:[0,2,4,6] },
+  pop:         { name:'Pop ↓ ↓↑ ↑↓',           kind:'strum',  marks:['↓','','↓','↑','','↑','↓',''],   hits:[0,2,3,5,6] },
+  worship:     { name:'Worship ↓ ↑ ↓↑',        kind:'strum',  marks:['↓','','↑','','↓','↑','','↑'],   hits:[0,2,4,5,7] },
+  arp1:        { name:'Arpegio 6-4-3-2-1-2',   kind:'arp',    strings:[5,3,2,1,0,1,2,3], marks:['6','4','3','2','1','2','3','4'], hits:[0,1,2,3,4,5,6,7] },
+  arp2:        { name:'Arpegio 5-4-3-2-1-2',   kind:'arp',    strings:[4,3,2,1,0,1,2,3], marks:['5','4','3','2','1','2','3','4'], hits:[0,1,2,3,4,5,6,7] },
+  melody:      { name:'Punteo simple',          kind:'melody', strings:[2,1,0,1,2,3,2,1], marks:['','','','','','','',''],        hits:[0,2,4,6] },
+  custom:      { name:'Custom rasgueo',         kind:'strum',  marks:['↓','','↓','↑','','↑','↓','↑'],  hits:[0,2,3,5,6,7] },
+  customArp:   { name:'Custom arpegio',         kind:'arp',    strings:[5,3,2,1,0,1,2,3], marks:['6','4','3','2','1','2','3','4'], hits:[0,1,2,3,4,5,6,7] },
+  customMelody:{ name:'Custom punteo',          kind:'melody', strings:[2,1,0,1,2,3,2,1], marks:['','','','','','','',''],        hits:[0,2,4,6] }
+};
+const PATTERNS_BY_FORMAT = {
+  strum:  ['ballad','down4','pop','worship','custom'],
+  arp:    ['arp1','arp2','customArp'],
+  melody: ['melody','customMelody']
+};
+const FORMAT_LABELS = {
+  strum:  'Rasgueo / acordes',
+  arp:    'Arpegio',
+  melody: 'Punteo / melodia'
+};
+// ─────────────────────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────────────────────
+let mode = 'empty'; // 'empty' | 'edit'
+let capo = 0;
+let songTitle = 'Guitar Arrangement Builder';
+let currentLibraryId = null;
+let backingTrackName = '';
+let backingTrackUrl = '';
+let backingTrackBlob = null;
+// ── Offset bidireccional ──────────────────────────────────────
+let backingStartSec = 0;
+let tabDelaySec     = 0;
+let backingEnabled  = false; // OFF por default — se activa al cargar backing
+let backingVolume   = 0.8;   // 0..1
+let arrangement = [];
+let currentMeasure = 1;
+let playing = false;
+let paused  = false;          // true when paused mid-playback
+let pausedElapsedSec = 0;     // seconds elapsed in sequence at pause time
+let backingCtxStart  = 0;     // AudioContext.currentTime when backing last started
+let backingPosStart  = 0;     // backing file position (s) when backing last started
+let savedStartMeasure = 1;    // measure to reset to on Stop
+let tabMuted = false;
+
+// ─────────────────────────────────────────────────────────────
+//  AUDIO ENGINE STATE  (v2 — precision lookahead scheduler)
+// ─────────────────────────────────────────────────────────────
+let sfInstrument   = null;   // soundfont-player instrument
+let sfReady        = false;  // instrument loaded
+let sfGainNode     = null;   // Web Audio GainNode for master guitar volume
+let toneLoadPromise = null;
+
+// Backing track via Web Audio (same clock as Tone.js)
+let backingAudioBuffer = null;   // decoded AudioBuffer
+let backingSourceNode = null;    // currently playing BufferSourceNode
+let backingGainNode = null;
+
+// Precision scheduler state
+let schedulerRafId = null;       // requestAnimationFrame handle
+let schedStartAudioTime = 0;    // AudioContext time when play() was called
+let schedStartMeasure = 0;       // arrangement measure index (0-based) when play() was called
+let schedNextMeasureIdx = 0;     // next measure index to schedule audio for
+let schedNextMeasureAudioTime = 0; // AudioContext time that measure starts
+
+// How far ahead we schedule (seconds). 100ms is safe for all browsers.
+const SCHED_LOOKAHEAD = 0.12;
+// Interval between scheduler ticks (ms). Short enough to never miss a window.
+const SCHED_INTERVAL_MS = 25;
+// Visual update: how often we update the highlighted measure via rAF (ms)
+const VISUAL_INTERVAL_MS = 50;
+let lastVisualUpdateMs = 0;
+
+// ─────────────────────────────────────────────────────────────
+//  CHORD / ARRANGEMENT HELPERS  (unchanged from v1)
+// ─────────────────────────────────────────────────────────────
+function parseChordText(text) {
+  return String(text || '')
+    .replace(/Key:\s*[A-G][b#]?\s*(major|minor)?/gi, ' ')
+    .replace(/Chords generated.+/gi, ' ')
+    .split(/[\s,|/]+/)
+    .map(t => t.trim())
+    .filter(t => /^[A-G](?:#|b)?(?:m|maj|min|dim|aug|sus|add|[0-9])?.*$/i.test(t));
+}
+
+function buildArrangement(chords) {
+  const clean = chords.length ? chords : ['C'];
+  return clean.map((originalChord, index) => ({
+    measure: index + 1,
+    originalChord,
+    events: [makeChordEvent(originalChord, 0)],
+    format: 'strum',
+    pattern: 'ballad',
+    startSlot: 0,
+    customMarks: ['↓','','↓','↑','','↑','↓','↑']
+  }));
+}
+
+function makeChordEvent(originalChord, startSlot = 0) {
+  return {
+    originalChord,
+    format: 'strum',
+    pattern: 'ballad',
+    startSlot,
+    customMarks: ['↓','','↓','↑','','↑','↓','↑']
+  };
+}
+
+function measureEvents(measure) {
+  if (measure.events?.length) return measure.events;
+  return [makeChordEvent(measure.originalChord, measure.startSlot || 0)];
+}
+
+function parseChord(chord) {
+  const match = String(chord).match(/^([A-G](?:#|b)?)(.*)$/);
+  if (!match) return { root: chord, suffix: '' };
+  return { root: match[1], suffix: match[2] || '' };
+}
+
+function transposeChord(chord, semitones) {
+  const { root, suffix } = parseChord(chord);
+  if (!(root in CHROMA)) return chord;
+  const pc = (CHROMA[root] + semitones + 120) % 12;
+  const useSharps = root.includes('#');
+  return `${useSharps ? SHARP_NAMES[pc] : FLAT_NAMES[pc]}${suffix}`;
+}
+
+function displayChord(measure) {
+  return transposeChord(measure.originalChord, -capo);
+}
+
+function displayEventChord(event) {
+  return transposeChord(event.originalChord, -capo);
+}
+
+function normalizeShapeChord(chord) {
+  const { root, suffix } = parseChord(chord);
+  const minor = /^m(?!aj)/.test(suffix);
+  return `${root}${minor ? 'm' : ''}`;
+}
+
+function getPattern(measure) {
+  if (measure.pattern === 'custom') {
+    return {
+      ...PATTERNS.custom,
+      kind: measure.format,
+      marks: measure.customMarks,
+      hits: measure.customMarks.map((mark, index) => mark ? index : -1).filter(index => index >= 0)
+    };
+  }
+  const base = PATTERNS[measure.pattern] || PATTERNS.ballad;
+  return { ...base, kind: measure.format };
+}
+
+function getEventPattern(event) {
+  if (event.pattern === 'custom') {
+    normalizeCustomMarks(event);
+    return {
+      ...PATTERNS.custom,
+      kind: event.format,
+      marks: event.customMarks,
+      hits: event.customMarks.map((mark, index) => mark ? index : -1).filter(index => index >= 0)
+    };
+  }
+  if (event.pattern === 'customArp') {
+    normalizeCustomMarks(event);
+    const strings = event.customMarks.map(mark => stringNumberToIndex(mark));
+    return {
+      ...PATTERNS.customArp,
+      kind: 'arp',
+      marks: event.customMarks,
+      strings,
+      hits: strings.map((value, index) => Number.isFinite(value) ? index : -1).filter(index => index >= 0)
+    };
+  }
+  if (event.pattern === 'customMelody') {
+    normalizeCustomMarks(event);
+    const strings = event.customMarks.map(mark => stringNumberToIndex(mark));
+    return {
+      ...PATTERNS.customMelody,
+      kind: 'melody',
+      marks: event.customMarks,
+      strings,
+      hits: strings.map((value, index) => Number.isFinite(value) ? index : -1).filter(index => index >= 0)
+    };
+  }
+  const base = PATTERNS[event.pattern] || PATTERNS.ballad;
+  return { ...base, kind: event.format };
+}
+
+function stringNumberToIndex(mark) {
+  const stringNumber = Number(mark);
+  if (!Number.isFinite(stringNumber) || stringNumber < 1 || stringNumber > 6) return NaN;
+  return 6 - stringNumber;
+}
+
+function defaultCustomMarks(format) {
+  if (format === 'arp') return ['6','4','3','2','1','2','3','4'];
+  if (format === 'melody') return ['','','','','','','',''];
+  return ['↓','','↓','↑','','↑','↓','↑'];
+}
+
+function normalizeCustomMarks(event) {
+  if (!isCustomPattern(event.pattern)) return;
+  const wantsStrings = event.pattern === 'customArp' || event.pattern === 'customMelody' || event.format !== 'strum';
+  const hasWrongType = wantsStrings
+    ? event.customMarks.some(mark => ['↓','↑','x'].includes(mark))
+    : event.customMarks.some(mark => /^[1-6]$/.test(mark));
+  if (!Array.isArray(event.customMarks) || event.customMarks.length !== 8 || hasWrongType) {
+    event.customMarks = defaultCustomMarks(
+      event.pattern === 'customMelody' ? 'melody' :
+      event.pattern === 'customArp' ? 'arp' :
+      event.format
+    );
+  }
+}
+
+function eventAtSlot(measure, slot) {
+  const events = measureEvents(measure).slice().sort((a, b) => a.startSlot - b.startSlot);
+  let active = events[0];
+  for (const event of events) {
+    if (slot >= event.startSlot) active = event;
+    else break;
+  }
+  return active;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  UI
+// ─────────────────────────────────────────────────────────────
+function setMode(nextMode) {
+  mode = nextMode;
+  document.body.classList.toggle('empty-mode', mode === 'empty');
+  document.body.classList.toggle('play-mode',  mode === 'play');
+  document.getElementById('edit-mode-btn').classList.toggle('active', mode === 'edit');
+  document.getElementById('play-mode-btn').classList.toggle('active', mode === 'play');
+  document.getElementById('bottom-bar').classList.toggle('disabled', mode !== 'play');
+  if (mode === 'edit' && playing) stopPlayback();
+  if (mode !== 'empty') renderAll();
+}
+
+function enterPlayMode() {
+  mode = 'play';
+  document.body.classList.remove('empty-mode');
+  document.body.classList.add('play-mode');
+  document.getElementById('edit-mode-btn').classList.remove('active');
+  document.getElementById('play-mode-btn').classList.add('active');
+  document.getElementById('bottom-bar').classList.remove('disabled');
+  renderAll();
+}
+
+// ── Drag & drop MusicXML onto dropzone ──
+function handleDragOver(event) {
+  event.preventDefault();
+  document.getElementById('dropzone-box').classList.add('drag-over');
+}
+function handleDragLeave(event) {
+  document.getElementById('dropzone-box').classList.remove('drag-over');
+}
+function handleDrop(event) {
+  event.preventDefault();
+  document.getElementById('dropzone-box').classList.remove('drag-over');
+  const files = [...(event.dataTransfer?.files || [])];
+  const xml  = files.find(f => /\.(xml|musicxml)$/i.test(f.name));
+  const json = files.find(f => /\.json$/i.test(f.name));
+  if (xml)       { loadMusicXmlFile(xml); return; }
+  if (json)      { loadJsonFile(json);    return; }
+  setStatus('Solo se aceptan archivos .xml, .musicxml o .json');
+}
+
+function setCapo(nextCapo) {
+  capo = nextCapo;
+  renderAll();
+  setStatus(capo ? `Capo ${capo}: se muestran las formas transportadas para tocar.` : 'Capo 0: se muestran los acordes originales.');
+}
+
+function setStatus(text) {
+  document.getElementById('status').textContent = text;
+}
+
+function renderAll() {
+  renderChordStrip();
+  renderTab();
+  document.getElementById('song-title').textContent = songTitle;
+  document.getElementById('measure-input').value = currentMeasure;
+  document.getElementById('play-measure-input').value = currentMeasure;
+  document.getElementById('backing-start-input').value = String(Number(backingStartSec || 0).toFixed(2));
+  document.getElementById('tab-delay-input').value     = String(Number(tabDelaySec     || 0).toFixed(2));
+  document.getElementById('play-total').textContent = `/ ${arrangement.length}`;
+  document.getElementById('subtitle').textContent =
+    `${arrangement.length} compases · capo ${capo} · ${mode === 'edit' ? 'editando arreglo' : 'modo play'}`;
+}
+
+function renderBeatBar(measure) {
+  const events = measureEvents(measure);
+  // Map each event to a color index
+  const eventColorMap = new Map(events.map((ev, i) => [ev, i]));
+  const strongSlots = new Set([0, 2, 4, 6]);
+
+  // Build slot coloring
+  const slots = Array.from({ length: 8 }, (_, slot) => {
+    const ev       = eventAtSlot(measure, slot);
+    const colorIdx = eventColorMap.get(ev) ?? 0;
+    const strong   = strongSlots.has(slot) ? 'strong' : 'weak';
+    return `<div class="beat-slot evt-${colorIdx} ${strong}" data-slot="${slot}">${BEAT_LABELS[slot]}</div>`;
+  });
+
+  // Build chord labels positioned proportionally above their start slot
+  // Each slot is 1/8 of the bar width → left = (startSlot / 8) * 100%
+  const chordLabels = events.map((ev, i) => {
+    const pct   = (ev.startSlot / 8) * 100;
+    const chord = displayEventChord(ev);
+    return `<div class="bar-chord-label evt-${i}" style="left:${pct}%">${chord}</div>`;
+  }).join('');
+
+  return `<div class="beat-bar-wrap">
+    <div class="bar-chord-row">${chordLabels}</div>
+    <div class="beat-bar" id="beat-bar-${measure.measure}">
+      ${slots.join('')}
+      <div class="beat-cursor" id="beat-cursor-${measure.measure}"></div>
+    </div>
+  </div>`;
+}
+
+function renderChordStrip() {
+  const wrap = document.getElementById('chord-strip');
+  wrap.innerHTML = '';
+  arrangement.forEach(measure => {
+    const events = measureEvents(measure);
+    const firstEvent = events[0];
+    const shownChord = displayEventChord(firstEvent);
+    const card = document.createElement('div');
+    card.className = `measure-card${events.length > 1 ? ' multi-chord' : ''}${measure.measure === currentMeasure ? ' active' : ''}`;
+    card.onclick = () => goMeasure(measure.measure);
+    const editControls = mode === 'edit' ? `
+      <div class="measure-edit" onclick="event.stopPropagation()">
+        ${events.map((eventItem, eventIndex) => renderEventControls(measure, eventItem, eventIndex)).join('')}
+      </div>` : '';
+    const chordHtml = events.length > 1
+      ? events.map(event => `<span class="chord-chip">${displayEventChord(event)} <small>${BEAT_LABELS[event.startSlot] || '1'}</small></span>`).join('')
+      : shownChord;
+    const originalHtml = events.length > 1
+      ? `original: ${events.map(event => `${event.originalChord}@${BEAT_LABELS[event.startSlot] || '1'}`).join(' · ')}`
+      : `original: ${firstEvent.originalChord}`;
+    card.innerHTML = `
+      <div class="measure-top"><span>${measure.measure}</span><span>${FORMAT_LABELS[firstEvent.format]}</span></div>
+      ${renderBeatBar(measure)}
+      <div class="pattern-name">${getEventPattern(firstEvent).name}</div>
+      ${editControls}
+    `;
+    wrap.appendChild(card);
+  });
+}
+
+function renderEventControls(measure, eventItem, eventIndex) {
+  return `
+    <div class="event-edit">
+      <div class="event-edit-title">
+        <span>${displayEventChord(eventItem)}</span>
+        <span>entra ${BEAT_LABELS[eventItem.startSlot] || '1'}</span>
+      </div>
+      <div class="event-edit-grid">
+        <select onchange="updateMeasureEvent(${measure.measure}, ${eventIndex}, 'format', this.value)">
+          ${Object.entries(FORMAT_LABELS).map(([value, label]) => `<option value="${value}" ${eventItem.format === value ? 'selected' : ''}>${label}</option>`).join('')}
+        </select>
+        <select onchange="updateMeasureEvent(${measure.measure}, ${eventIndex}, 'pattern', this.value)">
+          ${patternOptionsFor(eventItem).map(value => `<option value="${value}" ${eventItem.pattern === value ? 'selected' : ''}>${PATTERNS[value].name}</option>`).join('')}
+        </select>
+        <select onchange="updateMeasureEvent(${measure.measure}, ${eventIndex}, 'startSlot', Number(this.value))">
+          ${BEAT_LABELS.map((label, index) => `<option value="${index}" ${eventItem.startSlot === index ? 'selected' : ''}>Inicia ${label}</option>`).join('')}
+        </select>
+        ${isCustomPattern(eventItem.pattern) ? renderCustomButtons(measure, eventIndex) : ''}
+      </div>
+    </div>`;
+}
+
+function patternOptionsFor(eventItem) {
+  const options = PATTERNS_BY_FORMAT[eventItem.format] || PATTERNS_BY_FORMAT.strum;
+  return options.includes(eventItem.pattern) ? options : [eventItem.pattern, ...options].filter((v, i, arr) => arr.indexOf(v) === i && PATTERNS[v]);
+}
+
+function isCustomPattern(pattern) {
+  return pattern === 'custom' || pattern === 'customArp' || pattern === 'customMelody';
+}
+
+function renderCustomButtons(measure, eventIndex = 0) {
+  const eventItem = measureEvents(measure)[eventIndex] || measureEvents(measure)[0];
+  return `<div class="custom-grid">
+    ${eventItem.customMarks.map((mark, index) => `
+      <button class="custom-step" onclick="cycleCustomMark(${measure.measure}, ${eventIndex}, ${index})">${mark || '·'}</button>
+    `).join('')}
+  </div>`;
+}
+
+function renderTab() {
+  const panel = document.getElementById('tab-panel');
+  const colsPerMeasure = 8;
+  const totalCols = arrangement.length * colsPerMeasure;
+  panel.style.setProperty('--cols', totalCols);
+  let html = `<div class="tab-system"><div class="measure-number-row" style="--cols:${totalCols}"><div></div>`;
+  arrangement.forEach(measure => {
+    for (let c = 0; c < colsPerMeasure; c++) {
+      html += `<div class="measure-number-cell">${c === 0 ? measure.measure : ''}</div>`;
+    }
+  });
+  html += `</div><div class="beat-row" style="--cols:${totalCols}"><div></div>`;
+  arrangement.forEach(() => {
+    BEAT_LABELS.forEach(label => { html += `<div class="beat-cell">${label}</div>`; });
+  });
+  html += `</div><div class="rhythm-row" style="--cols:${totalCols}"><div></div>`;
+  arrangement.forEach(measure => {
+    for (let c = 0; c < colsPerMeasure; c++) {
+      const event = eventAtSlot(measure, c);
+      const pattern = getEventPattern(event);
+      const mark = c >= event.startSlot ? (pattern.marks[c - event.startSlot] || '') : '';
+      const rhythmClass = event.format === 'strum' ? 'strum-step' : 'string-step';
+      html += `<div class="rhythm-cell ${mark ? rhythmClass : ''}">${mark}</div>`;
+    }
+  });
+  html += '</div>';
+  STRINGS.forEach((stringName, sIndex) => {
+    html += `<div class="tab-line" style="--cols:${totalCols}"><div class="string-label">${stringName}</div>`;
+    arrangement.forEach(measure => {
+      for (let c = 0; c < colsPerMeasure; c++) {
+        const event = eventAtSlot(measure, c);
+        const chord = displayEventChord(event);
+        const shape = SHAPES[normalizeShapeChord(chord)] || ['','','','','',''];
+        const pattern = getEventPattern(event);
+        const local = c - event.startSlot;
+        const isHit = local >= 0 && pattern.hits.includes(local);
+        const atBar = c === 0;
+        let fret = '', type = '';
+        if (isHit) {
+          if (event.format === 'strum') {
+            fret = shape[sIndex];
+            type = fret === 'x' ? 'muted' : 'chord';
+          } else {
+            const stringToPlay = pattern.strings?.[local] ?? [5,4,3,2,1,0,1,2][local % 8];
+            if (stringToPlay === sIndex) {
+              fret = shape[sIndex] === 'x' ? '' : shape[sIndex];
+              type = event.format === 'arp' ? 'arp' : 'melody';
+            }
+          }
+        }
+        const active = measure.measure === currentMeasure ? ' active-measure' : '';
+        html += `<div class="tab-cell${atBar ? ' bar' : ''}${active}${type ? ' ' + type : ''}"><span>${fret === 'x' ? 'x' : fret}</span></div>`;
+      }
+    });
+    html += '</div>';
+  });
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+function updateMeasure(measureNumber, key, value) {
+  updateMeasureEvent(measureNumber, 0, key, value);
+}
+
+function updateMeasureEvent(measureNumber, eventIndex, key, value) {
+  const measure = arrangement[measureNumber - 1];
+  if (!measure) return;
+  const target = measureEvents(measure)[eventIndex] || measureEvents(measure)[0];
+  target[key] = value;
+  if (eventIndex === 0) measure[key] = value;
+  if (key === 'format') {
+    if (value === 'arp'    && !(PATTERNS_BY_FORMAT.arp    || []).includes(target.pattern)) target.pattern = 'arp1';
+    if (value === 'melody' && !(PATTERNS_BY_FORMAT.melody || []).includes(target.pattern)) target.pattern = 'melody';
+    if (value === 'strum'  && !(PATTERNS_BY_FORMAT.strum  || []).includes(target.pattern)) target.pattern = 'ballad';
+    normalizeCustomMarks(target);
+    if (eventIndex === 0) measure.pattern = target.pattern;
+  }
+  if (key === 'pattern') {
+    const pattern = PATTERNS[value];
+    if (pattern?.kind) target.format = pattern.kind;
+    if (isCustomPattern(value)) target.customMarks = defaultCustomMarks(target.format);
+    if (eventIndex === 0) { measure.pattern = target.pattern; measure.format = target.format; }
+  }
+  measure.events = measureEvents(measure).slice().sort((a, b) => a.startSlot - b.startSlot);
+  renderAll();
+}
+
+function cycleCustomMark(measureNumber, eventIndex, index) {
+  const measure = arrangement[measureNumber - 1];
+  if (!measure) return;
+  const target = measureEvents(measure)[eventIndex] || measureEvents(measure)[0];
+  normalizeCustomMarks(target);
+  const cycle = target.format === 'strum' ? ['', '↓', '↑', 'x'] : ['', '6', '5', '4', '3', '2', '1'];
+  const current = target.customMarks[index] || '';
+  target.customMarks[index] = cycle[(cycle.indexOf(current) + 1) % cycle.length];
+  if (eventIndex === 0) measure.customMarks = target.customMarks;
+  renderAll();
+}
+
+function goMeasure(measureNumber) {
+  currentMeasure = Math.max(1, Math.min(arrangement.length, measureNumber || 1));
+  renderAll();
+  syncScrollToCurrentMeasure();
+}
+
+function changeMeasure(delta) {
+  goMeasure(currentMeasure + delta);
+}
+
+function syncScrollToCurrentMeasure() {
+  document.querySelector('.measure-card.active')?.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+  const panel = document.getElementById('tab-panel');
+  if (!panel) return;
+  const labelWidth = 28, slotsPerMeasure = 8, slotWidth = 28;
+  const measureLeft = labelWidth + ((currentMeasure - 1) * slotsPerMeasure * slotWidth);
+  const targetLeft = Math.max(0, measureLeft - (panel.clientWidth * 0.35));
+  panel.scrollTo({ left: targetLeft, top: panel.scrollTop, behavior: 'smooth' });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  DIALOGS
+// ─────────────────────────────────────────────────────────────
+function openChordDialog() {
+  document.getElementById('chord-text').value = arrangement.length
+    ? arrangement.map(m => m.originalChord).join(' ')
+    : '';
+  document.getElementById('chord-dialog').showModal();
+}
+function closeChordDialog() { document.getElementById('chord-dialog').close(); }
+
+function applyChordText() {
+  const chords = parseChordText(document.getElementById('chord-text').value);
+  arrangement = buildArrangement(chords);
+  currentMeasure = 1;
+  closeChordDialog();
+  enterPlayMode();
+  setStatus(`${arrangement.length} acordes convertidos en ${arrangement.length} compases.`);
+}
+
+function readMusicXml(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  loadMusicXmlFile(file);
+  event.target.value = '';
+}
+
+function loadMusicXmlFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      arrangement = buildArrangementFromMusicXml(String(reader.result || ''));
+      songTitle = extractMusicXmlTitle(String(reader.result || ''), file.name);
+      currentLibraryId = null;
+      resetBackingState();
+      currentMeasure = 1;
+      enterPlayMode();
+      setStatus(`${arrangement.length} compases importados desde MusicXML.`);
+    } catch (error) {
+      console.error(error);
+      setStatus('No pude leer acordes desde ese MusicXML.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function extractMusicXmlTitle(xml, fallback) {
+  try {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    const credit = doc.querySelector('credit-words')?.textContent?.trim();
+    const movement = doc.querySelector('movement-title')?.textContent?.trim();
+    const work = doc.querySelector('work-title')?.textContent?.trim();
+    return cleanTitle(credit || movement || work || fallback || 'Arreglo de guitarra');
+  } catch { return cleanTitle(fallback || 'Arreglo de guitarra'); }
+}
+
+function cleanTitle(title) {
+  return String(title || 'Arreglo de guitarra')
+    .replace(/\.(musicxml|xml|json)$/i, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildArrangementFromMusicXml(xml) {
+  const doc = new DOMParser().parseFromString(xml, 'application/xml');
+  const parseError = doc.querySelector('parsererror');
+  if (parseError) throw new Error(parseError.textContent || 'MusicXML invalido');
+  let divisions = 1, beats = 4, beatType = 4;
+  const measures = [...doc.querySelectorAll('part measure')];
+  const imported = measures.map((measureEl, index) => {
+    const divisionsEl = measureEl.querySelector('attributes > divisions');
+    const beatsEl     = measureEl.querySelector('attributes > time > beats');
+    const beatTypeEl  = measureEl.querySelector('attributes > time > beat-type');
+    if (divisionsEl) divisions = Number(divisionsEl.textContent) || divisions;
+    if (beatsEl)     beats = Number(beatsEl.textContent) || beats;
+    if (beatTypeEl)  beatType = Number(beatTypeEl.textContent) || beatType;
+    const measureDuration = divisions * beats * (4 / beatType);
+    const events = [...measureEl.querySelectorAll(':scope > harmony')].map(harmony => {
+      const offset = Number(harmony.querySelector('offset')?.textContent || 0);
+      const startSlot = Math.max(0, Math.min(7, Math.round((offset / measureDuration) * 8)));
+      return makeChordEvent(chordFromHarmony(harmony), startSlot);
+    }).filter(event => event.originalChord);
+    const cleanEvents = mergeDuplicateEvents(events);
+    return {
+      measure: Number(measureEl.getAttribute('number')) || index + 1,
+      originalChord: cleanEvents[0]?.originalChord || 'rest',
+      events: cleanEvents.length ? cleanEvents : [makeChordEvent('rest', 0)],
+      format: 'strum',
+      pattern: 'ballad',
+      startSlot: cleanEvents[0]?.startSlot || 0,
+      customMarks: ['↓','','↓','↑','','↑','↓','↑']
+    };
+  });
+  return imported.filter(m => m.events[0]?.originalChord !== 'rest' || measureEvents(m).length);
+}
+
+function mergeDuplicateEvents(events) {
+  const sorted = events.slice().sort((a, b) => a.startSlot - b.startSlot);
+  return sorted.filter((event, index) => {
+    const prev = sorted[index - 1];
+    return !prev || prev.startSlot !== event.startSlot || prev.originalChord !== event.originalChord;
+  });
+}
+
+function chordFromHarmony(harmony) {
+  const step = harmony.querySelector('root > root-step')?.textContent?.trim();
+  if (!step) return '';
+  const alter = Number(harmony.querySelector('root > root-alter')?.textContent || 0);
+  const root = alter === -1 ? `${step}b` : alter === 1 ? `${step}#` : step;
+  const kind = harmony.querySelector('kind');
+  const kindType = kind?.textContent?.trim() || '';
+  const kindText = kind?.getAttribute('text') || '';
+  return `${root}${chordKindSuffix(kindText, kindType)}`;
+}
+
+function chordKindSuffix(text, type) {
+  const raw = `${text} ${type}`.toLowerCase();
+  if (text) return text.replace(/^major$/i, '');
+  if (raw.includes('minor-seventh')) return 'm7';
+  if (raw.includes('major-seventh')) return 'maj7';
+  if (raw.includes('dominant')) return '7';
+  if (raw.includes('minor')) return 'm';
+  if (raw.includes('diminished')) return 'dim';
+  if (raw.includes('augmented')) return 'aug';
+  if (raw.includes('suspended-fourth')) return 'sus4';
+  if (raw.includes('suspended-second')) return 'sus2';
+  return '';
+}
+
+// ─────────────────────────────────────────────────────────────
+//  BPM HELPERS
+// ─────────────────────────────────────────────────────────────
+function getBpm() {
+  return Math.max(35, Math.min(180, Number(document.getElementById('bpm-input')?.value || 70)));
+}
+function measureSeconds() { return (60 / getBpm()) * 4; }
+function slotSeconds()    { return measureSeconds() / 8; }
+
+// ─────────────────────────────────────────────────────────────
+//  BACKING TRACK — stored as raw blob, decoded to AudioBuffer
+//  so it shares the AudioContext clock with Tone.js
+// ─────────────────────────────────────────────────────────────
+function resetBackingState() {
+  stopBackingNode();
+  backingAudioBuffer = null;
+  backingTrackName = '';
+  backingTrackUrl = '';
+  backingTrackBlob = null;
+  backingStartSec = 0;
+  tabDelaySec     = 0;
+  backingEnabled  = false;
+  const btn = document.getElementById('backing-toggle-btn');
+  if (btn) { btn.classList.remove('active'); }
+  document.getElementById('backing-audio').removeAttribute('src');
+  updateBackingSection();
+}
+
+function stopBackingNode() {
+  if (backingSourceNode) {
+    try { backingSourceNode.stop(); } catch (_) {}
+    backingSourceNode.disconnect();
+    backingSourceNode = null;
+  }
+}
+
+async function decodeBackingBlob(blob) {
+  if (!blob) return;
+  await ensureAudio(); // makes sure Tone.context is alive
+  const ac = Tone.context.rawContext;
+  const arrayBuffer = await blob.arrayBuffer();
+  backingAudioBuffer = await ac.decodeAudioData(arrayBuffer);
+  // ensure gain node exists
+  if (!backingGainNode) {
+    backingGainNode = ac.createGain();
+    backingGainNode.gain.value = backingVolume;
+    backingGainNode.connect(ac.destination);
+  }
+  setStatus(`Backing decodificado (${backingAudioBuffer.duration.toFixed(1)}s). Ajusta los offsets y guarda.`);
+}
+
+/**
+ * Start playing the backing track from `fromSeconds` in the audio file,
+ * scheduled to begin at `atAudioTime` in the AudioContext clock.
+ */
+function startBackingAt(fromSeconds, atAudioTime) {
+  if (!backingAudioBuffer) return;
+  stopBackingNode();
+  const ac = Tone.context.rawContext;
+  if (!backingGainNode) {
+    backingGainNode = ac.createGain();
+    backingGainNode.gain.value = backingVolume;
+    backingGainNode.connect(ac.destination);
+  }
+  backingGainNode.gain.value = backingVolume;
+  backingSourceNode = ac.createBufferSource();
+  backingSourceNode.buffer = backingAudioBuffer;
+  backingSourceNode.connect(backingGainNode);
+  const safeFrom = Math.max(0, Math.min(fromSeconds, backingAudioBuffer.duration - 0.01));
+  backingSourceNode.start(atAudioTime, safeFrom);
+  backingCtxStart = atAudioTime;
+  backingPosStart = safeFrom;
+  backingSourceNode.onended = () => { backingSourceNode = null; };
+}
+
+/**
+ * Legacy preview: play backing via <audio> for the markBackingOffset workflow.
+ * Not used during sequenced playback.
+ */
+function loadBackingTrack(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (backingTrackUrl) URL.revokeObjectURL(backingTrackUrl);
+  backingTrackBlob = file;
+  backingTrackUrl = URL.createObjectURL(file);
+  backingTrackName = file.name;
+  // Set <audio> for preview/offset marking
+  const audio = document.getElementById('backing-audio');
+  audio.src = backingTrackUrl;
+  audio.load();
+  // Decode into AudioBuffer in the background
+  decodeBackingBlob(file).catch(e => {
+    setStatus('No pude decodificar el backing track: ' + e.message);
+  });
+  setStatus(`Backing cargado: ${file.name}. Ajusta "Backing desde" y "Tab entra en" para sincronizar.`);
+  event.target.value = '';
+  updateBackingSection();
+}
+
+// ── Offset setters ────────────────────────────────────────────
+// Pill toggle: activa/desactiva backing Y muestra/oculta el panel a la vez
+function toggleBacking() {
+  backingEnabled = !backingEnabled;
+  const btn     = document.getElementById('backing-toggle-btn');
+  const section = document.getElementById('backing-section');
+  if (btn)     btn.classList.toggle('active', backingEnabled);
+  if (section) section.classList.toggle('visible', backingEnabled);
+  setStatus(backingEnabled ? 'Backing activado.' : 'Backing desactivado — solo guitarra guía.');
+  // Si está en play: parar siempre (al activar o desactivar) para resync
+  if (playing) stopPlay();
+}
+
+function updateBackingSection() {
+  if (!document.body) return;
+  const hasFile   = !!backingTrackBlob;
+  const loadBtn   = document.getElementById('load-backing-btn');
+  const toggleBtn = document.getElementById('backing-toggle-btn');
+  if (loadBtn)   loadBtn.style.display   = hasFile ? 'none'        : '';
+  if (toggleBtn) toggleBtn.style.display = hasFile ? 'inline-flex' : 'none';
+  const label = document.getElementById('backing-name-label');
+  if (label) label.textContent = backingTrackName || '—';
+  // Al cargar un backing nuevo: panel visible, backing OFF por default
+  const section = document.getElementById('backing-section');
+  if (hasFile && section && !section.classList.contains('visible')) {
+    backingEnabled = false;
+    if (toggleBtn) toggleBtn.classList.remove('active');
+    section.classList.remove('visible');
+  }
+  if (!hasFile && section) section.classList.remove('visible');
+}
+
+function setBackingStartSec(value) {
+  backingStartSec = Math.max(0, Number.isFinite(value) ? value : 0);
+  setStatus(`Backing arranca desde ${backingStartSec.toFixed(2)}s del archivo de audio.`);
+}
+
+function setTabDelaySec(value) {
+  tabDelaySec = Math.max(0, Number.isFinite(value) ? value : 0);
+  setStatus(`La tablatura entra ${tabDelaySec.toFixed(2)}s después de que arranca el backing.`);
+}
+
+/**
+ * Marca el segundo actual del <audio> de preview como el momento
+ * en que debe entrar la tablatura (tabDelaySec).
+ * backingStartSec se mantiene independiente.
+ */
+function markTabEntry() {
+  const audio = document.getElementById('backing-audio');
+  const current = audio.currentTime || 0;
+  tabDelaySec = Math.max(0, current - backingStartSec);
+  document.getElementById('tab-delay-input').value = tabDelaySec.toFixed(2);
+  setStatus(`Tab entrará a los ${tabDelaySec.toFixed(2)}s desde el inicio del backing (segundo ${current.toFixed(2)}s del archivo).`);
+}
+
+/**
+ * Preview: reproduce/detiene el backing usando <audio>.
+ * Toggle: si ya está sonando lo detiene; si no, arranca desde backingStartSec.
+ */
+function previewBackingFromStart() {
+  const audio = document.getElementById('backing-audio');
+  const btn   = document.getElementById('preview-btn');
+  if (!audio.src) { setStatus('Carga un backing track primero.'); return; }
+  if (!audio.paused) {
+    audio.pause();
+    if (btn) btn.textContent = '▶ Preview';
+    setStatus('Preview detenido.');
+    return;
+  }
+  audio.currentTime = backingStartSec;
+  audio.play().catch(() => setStatus('No pude reproducir el preview.'));
+  if (btn) btn.textContent = '■ Stop preview';
+  setStatus(`Preview desde ${backingStartSec.toFixed(2)}s — presiona "Marcar entrada tab" cuando empiece el compás 1.`);
+  // Reset button label when audio ends naturally
+  audio.onended = () => { if (btn) btn.textContent = '▶ Preview'; };
+}
+
+// ─────────────────────────────────────────────────────────────
+//  TONE.JS SAMPLER SETUP
+// ─────────────────────────────────────────────────────────────
+async function ensureAudio() {
+  await loadTone();
+  if (!window.Tone) {
+    setStatus('Tone.js no cargo desde CDN. Revisa conexion a internet y recarga.');
+    throw new Error('Tone.js unavailable');
+  }
+  await Tone.start();
+  if (!sfInstrument) {
+    setStatus('Cargando samples de guitarra...');
+    const ac = Tone.context.rawContext;
+    // Master gain node — set to 0 on stop, restored on play
+    sfGainNode = ac.createGain();
+    sfGainNode.gain.value = 1;
+    sfGainNode.connect(ac.destination);
+    try {
+      sfInstrument = await Soundfont.instrument(ac, 'acoustic_guitar_steel', {
+        soundfont: 'MuseScore',
+        destination: sfGainNode,
+        gain: 3.2
+      });
+      sfReady = true;
+      setStatus('Samples de guitarra listos.');
+    } catch(e) {
+      // Fallback to FluidR3
+      try {
+        sfInstrument = await Soundfont.instrument(ac, 'acoustic_guitar_steel', {
+          soundfont: 'FluidR3_GM',
+          destination: sfGainNode,
+          gain: 3.2
+        });
+        sfReady = true;
+        setStatus('Samples de guitarra listos (FluidR3).');
+      } catch(e2) {
+        setStatus('No pude cargar samples de guitarra. Revisa tu conexion.');
+      }
+    }
+  }
+}
+
+function loadTone() {
+  if (window.Tone) return Promise.resolve();
+  if (toneLoadPromise) return toneLoadPromise;
+  const sources = [
+    'https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js',
+    'https://unpkg.com/tone@14.8.49/build/Tone.js',
+    'https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js'
+  ];
+  toneLoadPromise = sources.reduce((p, src) => p.catch(() => loadScript(src)), Promise.reject())
+    .catch(err => { toneLoadPromise = null; throw err; });
+  return toneLoadPromise;
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = [...document.scripts].find(s => s.src === src);
+    if (existing && window.Tone) { resolve(); return; }
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload  = resolve;
+    script.onerror = () => reject(new Error(`No cargo ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  GUITAR NOTE RENDERING  (unchanged from v1)
+// ─────────────────────────────────────────────────────────────
+function scheduleMeasureNotes(measure, startAudioTime, fromSlot = 0) {
+  if (!measure) return;
+  const ss = slotSeconds();
+  const played = new Set();
+  for (let slot = 0; slot < 8; slot++) {
+    if (slot < fromSlot) continue;   // skip already-played slots when resuming
+    const event   = eventAtSlot(measure, slot);
+    const pattern = getEventPattern(event);
+    const local   = slot - event.startSlot;
+    if (local < 0 || !pattern.hits.includes(local)) continue;
+    const hitKey = `${slot}-${event.originalChord}-${event.format}-${event.pattern}`;
+    if (played.has(hitKey)) continue;
+    played.add(hitKey);
+    const hitTime = startAudioTime + ((slot - fromSlot) * ss);
+    if (event.format === 'strum') scheduleStrum(event, pattern.marks[local] || '↓', hitTime);
+    else scheduleSingleString(event, pattern, local, hitTime);
+  }
+}
+
+function scheduleStrum(event, mark, time) {
+  const chord   = transposeChord(event.originalChord, 0);
+  const shape   = SHAPES[normalizeShapeChord(chord)];
+  if (!shape) return;
+  const down    = mark !== '↑';
+  const order   = down ? [5,4,3,2,1,0] : [0,1,2,3,4,5];
+  const spacing = mark === 'x' ? 0.005 : 0.022;
+  const dur     = mark === 'x' ? '32n' : '8n';  // rasgueo natural
+  order.forEach((sIndex, orderIndex) => {
+    const fret = shape[sIndex];
+    if (fret === '' || fret === 'x') return;
+    const velocity = mark === 'x' ? 0.16 : Math.max(0.25, 0.62 - (orderIndex * 0.03));
+    triggerGuitarNote(sIndex, Number(fret) + capo, time + (orderIndex * spacing), dur, velocity);
+  });
+}
+
+function scheduleSingleString(event, pattern, local, time) {
+  const chord  = transposeChord(event.originalChord, 0);
+  const shape  = SHAPES[normalizeShapeChord(chord)];
+  if (!shape) return;
+  const sIndex = pattern.strings?.[local] ?? [5,4,3,2,1,0,1,2][local % 8];
+  const fret   = shape[sIndex];
+  if (fret === '' || fret === 'x') return;
+  triggerGuitarNote(sIndex, Number(fret) + capo, time,
+    event.format === 'melody' ? '8n' : '16n',
+    event.format === 'melody' ? 0.68 : 0.52);
+}
+
+function triggerGuitarNote(stringIndex, fret, time, durationStr, velocity) {
+  if (!sfInstrument || !sfReady || tabMuted) return;
+  const midi = STRING_OPEN_MIDI[stringIndex] + fret;
+  const bpm  = getBpm();
+  // Convert Tone.js note length strings → seconds
+  // Guitar: let notes ring naturally — strums slightly shorter, arpeggios long
+  let durSec;
+  if (durationStr === '32n') {
+    durSec = 0.08;            // muted/palm-muted strum
+  } else if (durationStr === '16n') {
+    durSec = 60 / bpm / 4 * 3; // arpeggio — ring ~¾ beat
+  } else if (durationStr === '8n') {
+    durSec = 60 / bpm / 2 * 2.5; // melody — ring ~2.5 eighth notes
+  } else {
+    durSec = 0.6;             // fallback
+  }
+  sfInstrument.play(midi, time, { duration: durSec, gain: velocity });
+}
+
+function stopGuitar() {
+  if (!sfInstrument || !sfReady) return;
+  // Immediately mute gain — kills pre-scheduled notes AND any ring-out
+  if (sfGainNode) {
+    sfGainNode.gain.cancelScheduledValues(0);
+    sfGainNode.gain.setValueAtTime(0, 0);
+  }
+  try { sfInstrument.stop(); } catch(e) {}
+}
+
+function restoreGuitarGain() {
+  if (sfGainNode) {
+    sfGainNode.gain.cancelScheduledValues(0);
+    sfGainNode.gain.setValueAtTime(1, 0);
+  }
+}
+function toggleMuteTab() {
+  tabMuted = !tabMuted;
+  const btn = document.getElementById('mute-tab-btn');
+  if (tabMuted) {
+    stopGuitar(); // cut off any currently ringing notes
+    btn.textContent = '🔊 Activar tab';
+    btn.style.background = '#302c27';
+    btn.style.color = '#fff';
+    setStatus('Guitarra guía silenciada — toca con tu guitarra real.');
+  } else {
+    restoreGuitarGain();
+    btn.textContent = '🔇 Mutear tab';
+    btn.style.background = '';
+    btn.style.color = '';
+    setStatus('Guitarra guía activada.');
+  }
+}
+
+
+
+
+// ─────────────────────────────────────────────────────────────
+//  PRECISION LOOKAHEAD SCHEDULER  (v2 — replaces setTimeout loop)
+//
+//  Strategy:
+//  1. On play(), record AudioContext "zero" time + starting measure.
+//  2. A requestAnimationFrame loop ticks every ~16ms.
+//     Every SCHED_INTERVAL_MS it looks ahead SCHED_LOOKAHEAD seconds
+//     into the AudioContext timeline and schedules any measures whose
+//     audio-start-time falls within that window.
+//  3. Visual update (currentMeasure highlight) is driven by comparing
+//     AudioContext.currentTime against the pre-calculated schedule,
+//     so it's always correct regardless of JS timer jitter.
+//  4. The backing track is started as a Web Audio BufferSourceNode at
+//     the exact same AudioContext time as the first guitar note.
+//     → Both clocks are identical, drift = 0.
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Build a flat array of { measureIdx, audioStartTime } for the whole song
+ * given a play start at AudioContext time `originTime` from measure index `fromIdx`.
+ */
+function buildScheduleMap(originTime, fromIdx) {
+  const map = [];
+  const ms = measureSeconds();
+  for (let i = fromIdx; i < arrangement.length; i++) {
+    map.push({
+      measureIdx: i,
+      audioStartTime: originTime + ((i - fromIdx) * ms)
+    });
+  }
+  return map;
+}
+
+let scheduleMap = [];   // [{measureIdx, audioStartTime}, ...]
+let schedMapPos = 0;    // pointer into scheduleMap for next-to-schedule
+
+function schedulerTick(rafTimestamp) {
+  if (!playing) return;
+
+  const now = Tone.now();  // AudioContext.currentTime via Tone
+
+  // ── AUDIO SCHEDULING ───────────────────────────────────────
+  // Schedule all measures whose start is within the lookahead window
+  while (schedMapPos < scheduleMap.length) {
+    const entry = scheduleMap[schedMapPos];
+    if (entry.audioStartTime > now + SCHED_LOOKAHEAD) break;
+    scheduleMeasureNotes(arrangement[entry.measureIdx], entry.audioStartTime);
+    schedMapPos++;
+  }
+
+  // ── VISUAL UPDATE ──────────────────────────────────────────
+  if (rafTimestamp - lastVisualUpdateMs >= VISUAL_INTERVAL_MS) {
+    lastVisualUpdateMs = rafTimestamp;
+    const ms  = measureSeconds();
+    const ss  = ms / 8;
+
+    // elapsedSec is relative to when the TAB starts (schedStartAudioTime = tabOriginAudioTime)
+    // During tabDelaySec the tab hasn't started yet — keep cursor hidden
+    const elapsedSec = now - schedStartAudioTime;
+
+    if (elapsedSec < 0) {
+      // Still in intro delay — cursor stays hidden, no measure advance
+      document.querySelectorAll('.beat-cursor').forEach(el => el.style.opacity = '0');
+      schedulerRafId = requestAnimationFrame(schedulerTick);
+      return;
+    }
+
+    const rawIdx      = Math.floor(elapsedSec / ms);
+    const absoluteIdx = schedStartMeasure + rawIdx;
+    const clampedIdx  = Math.max(schedStartMeasure, Math.min(arrangement.length - 1, absoluteIdx));
+
+    // ── Measure highlight ──
+    if (currentMeasure !== clampedIdx + 1) {
+      currentMeasure = clampedIdx + 1;
+      document.getElementById('measure-input').value = currentMeasure;
+      document.getElementById('play-measure-input').value = currentMeasure;
+      renderChordStrip();
+      renderTab();
+      syncScrollToCurrentMeasure();
+    }
+
+    // ── Beat cursor on active card ──
+    const measureStartTime = schedStartAudioTime + (rawIdx * ms);
+    const withinMeasure    = Math.max(0, now - measureStartTime);
+    const slotPct          = Math.min(withinMeasure / ms, 1); // 0..1 across the full measure
+    const cursor = document.getElementById(`beat-cursor-${clampedIdx + 1}`);
+    if (cursor) {
+      const barW = cursor.parentElement.offsetWidth;
+      cursor.style.left    = `${slotPct * barW}px`;
+      cursor.style.opacity = '1';
+    }
+    // Hide cursors on other cards
+    document.querySelectorAll('.beat-cursor').forEach(el => {
+      if (el.id !== `beat-cursor-${clampedIdx + 1}`) el.style.opacity = '0';
+    });
+  }
+
+  // ── END OF SONG ────────────────────────────────────────────
+  if (schedMapPos >= scheduleMap.length) {
+    // All measures are scheduled; wait until the last one finishes, then stop
+    const lastEntry = scheduleMap[scheduleMap.length - 1];
+    const endTime   = lastEntry.audioStartTime + measureSeconds();
+    if (now >= endTime) {
+      stopPlayback();
+      return;
+    }
+  }
+
+  schedulerRafId = requestAnimationFrame(schedulerTick);
+}
+
+async function startPlayback() {
+  await ensureAudio();
+  restoreGuitarGain(); // ensure gain is ON after a previous stop
+  playing = true;
+  paused  = false;
+  savedStartMeasure = currentMeasure;
+  document.getElementById('play-btn').textContent = '⏸';
+  document.getElementById('play-btn').classList.add('playing');
+
+  const startMeasureIdx = currentMeasure - 1;
+  schedStartMeasure     = startMeasureIdx;
+
+  // Lead-in so AudioContext has time to warm up before the first note
+  const LEAD_IN = 0.08;
+  const originAudioTime = Tone.now() + LEAD_IN;
+
+  // ── How the two offsets interact ──────────────────────────────
+  // backingStartSec : offset dentro del archivo (recorta silencio del mp3)
+  // tabDelaySec     : cuántos segundos después de que arranca el backing
+  //                   entra la tablatura (la intro de la canción)
+  //
+  // Timeline del AudioContext:
+  //
+  //   originAudioTime  ← backing arranca aquí (desde backingStartSec del archivo)
+  //   originAudioTime + tabDelaySec + (startMeasureIdx * measureSeconds())
+  //                    ← primer compás de tab suena aquí
+  //
+  // Si empezamos desde compás 1: backing arranca, tab espera tabDelaySec
+  // Si empezamos desde compás N: saltamos en el backing la intro + los compases ya pasados
+  // ─────────────────────────────────────────────────────────────
+
+  // ── Offset logic ─────────────────────────────────────────────
+  // tabDelaySec solo aplica cuando arrancamos desde compás 1 Y el backing está activo
+  const isFromStart    = startMeasureIdx === 0;
+  const effectiveDelay = (isFromStart && backingEnabled) ? tabDelaySec : 0;
+
+  const tabOriginAudioTime = originAudioTime + effectiveDelay;
+  schedStartAudioTime = tabOriginAudioTime;
+
+  scheduleMap = buildScheduleMap(tabOriginAudioTime, startMeasureIdx);
+  schedMapPos = 0;
+  lastVisualUpdateMs = 0;
+
+  // Backing: si arranca desde el compás 1, reproduce desde backingStartSec.
+  // Si arranca desde compás N, salta al punto correspondiente en el archivo.
+  if (backingAudioBuffer && backingEnabled) {
+    const backingFilePos = isFromStart
+      ? backingStartSec
+      : backingStartSec + tabDelaySec + (startMeasureIdx * measureSeconds());
+    startBackingAt(backingFilePos, originAudioTime);
+  }
+
+  schedulerRafId = requestAnimationFrame(schedulerTick);
+}
+
+function stopPlayback() {
+  playing = false;
+  paused  = false;
+  if (schedulerRafId !== null) {
+    cancelAnimationFrame(schedulerRafId);
+    schedulerRafId = null;
+  }
+  stopBackingNode();
+  stopGuitar();
+  document.getElementById('play-btn').textContent = '▶';
+  document.getElementById('play-btn').classList.remove('playing');
+  document.querySelectorAll('.beat-cursor').forEach(el => el.style.opacity = '0');
+}
+
+// Public stop — always resets to savedStartMeasure
+function stopPlay() {
+  stopPlayback();
+  currentMeasure = savedStartMeasure;
+  document.getElementById('measure-input').value      = currentMeasure;
+  document.getElementById('play-measure-input').value = currentMeasure;
+  renderChordStrip();
+  renderTab();
+  syncScrollToCurrentMeasure();
+}
+
+async function togglePlay() {
+  if (mode !== 'play') return;
+
+  // ── Currently playing → pause ──────────────────────────
+  if (playing) {
+    // Snapshot positions
+    const nowT = Tone.now();
+    pausedElapsedSec = nowT - schedStartAudioTime;
+    if (backingSourceNode && backingAudioBuffer) {
+      backingPosStart = backingPosStart + Math.max(0, nowT - backingCtxStart);
+    }
+    playing = false;
+    paused  = true;
+    if (schedulerRafId !== null) { cancelAnimationFrame(schedulerRafId); schedulerRafId = null; }
+    stopBackingNode();
+    stopGuitar();
+    document.getElementById('play-btn').textContent = '▶';
+    document.getElementById('play-btn').classList.remove('playing');
+    document.querySelectorAll('.beat-cursor').forEach(el => el.style.opacity = '0');
+    return;
+  }
+
+  // ── Paused → resume from exact position ───────────────
+  if (paused) {
+    await ensureAudio();
+    paused  = false;
+    playing = true;
+    restoreGuitarGain();
+    document.getElementById('play-btn').textContent = '⏸';
+    document.getElementById('play-btn').classList.add('playing');
+
+    const LEAD_IN = 0.05;
+    const nowAudio = Tone.now() + LEAD_IN;
+    const ms = measureSeconds();
+    const ss = slotSeconds();
+
+    // Figure out where we paused
+    const elapsedMeasures = Math.floor(pausedElapsedSec / ms);
+    const fromMeasureIdx  = Math.min(schedStartMeasure + elapsedMeasures, arrangement.length - 1);
+    const withinMeasureSec = pausedElapsedSec - elapsedMeasures * ms;
+    const fromSlot = Math.min(7, Math.floor(withinMeasureSec / ss));
+
+    // Reset scheduler anchors so visuals stay correct
+    schedStartMeasure   = fromMeasureIdx;
+    schedStartAudioTime = nowAudio - withinMeasureSec;
+
+    // Rebuild schedule map from the NEXT measure; schedule current manually
+    scheduleMap = buildScheduleMap(schedStartAudioTime, fromMeasureIdx);
+    schedMapPos = 1;  // skip entry[0] = current (partial) measure
+    lastVisualUpdateMs = 0;
+
+    // Schedule remaining slots of current measure
+    if (arrangement[fromMeasureIdx]) {
+      scheduleMeasureNotes(arrangement[fromMeasureIdx], nowAudio, fromSlot);
+    }
+
+    // Resume backing from saved position
+    if (backingAudioBuffer && backingEnabled && backingPosStart < backingAudioBuffer.duration) {
+      startBackingAt(backingPosStart, nowAudio);
+    }
+
+    schedulerRafId = requestAnimationFrame(schedulerTick);
+    return;
+  }
+
+  // ── Stopped → start fresh ─────────────────────────────
+  await startPlayback();
+}
+
+// One-shot: play just the current measure for preview
+async function playCurrentMeasure() {
+  await ensureAudio();
+  restoreGuitarGain();
+  const startTime = Tone.now() + 0.04;
+  scheduleMeasureNotes(arrangement[currentMeasure - 1], startTime);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PERSISTENCE: IndexedDB (backing blobs) + localStorage
+// ─────────────────────────────────────────────────────────────
+function openBackingDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(BACKING_DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(BACKING_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+async function saveBackingBlob(id, blob) {
+  if (!id || !blob) return;
+  const db = await openBackingDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(BACKING_STORE, 'readwrite');
+    tx.objectStore(BACKING_STORE).put(blob, id);
+    tx.oncomplete = resolve;
+    tx.onerror    = () => reject(tx.error);
+  });
+  db.close();
+}
+
+async function loadBackingBlob(id) {
+  if (!id) return null;
+  const db = await openBackingDb();
+  const blob = await new Promise((resolve, reject) => {
+    const tx  = db.transaction(BACKING_STORE, 'readonly');
+    const req = tx.objectStore(BACKING_STORE).get(id);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror   = () => reject(req.error);
+  });
+  db.close();
+  return blob;
+}
+
+async function deleteBackingBlob(id) {
+  if (!id) return;
+  const db = await openBackingDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(BACKING_STORE, 'readwrite');
+    tx.objectStore(BACKING_STORE).delete(id);
+    tx.oncomplete = resolve;
+    tx.onerror    = () => reject(tx.error);
+  });
+  db.close();
+}
+
+async function attachBackingBlob(blob, name) {
+  if (!blob) return false;
+  if (backingTrackUrl) URL.revokeObjectURL(backingTrackUrl);
+  backingTrackBlob = blob;
+  backingTrackUrl  = URL.createObjectURL(blob);
+  backingTrackName = name || backingTrackName || 'backing-track';
+  // <audio> for offset preview
+  const audio = document.getElementById('backing-audio');
+  audio.src = backingTrackUrl;
+  audio.load();
+  // Decode to AudioBuffer
+  await decodeBackingBlob(blob).catch(e => console.error('decode error', e));
+  updateBackingSection();
+  return true;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  LIBRARY
+// ─────────────────────────────────────────────────────────────
+function arrangementDocument() {
+  return {
+    version: 3,
+    id: currentLibraryId,
+    title: songTitle,
+    savedAt: new Date().toISOString(),
+    capo,
+    bpm: getBpm(),
+    backingTrackName,
+    backingStartSec,
+    tabDelaySec,
+    grid: '8 slots per measure',
+    arrangement
+  };
+}
+
+function readLibrary() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LIBRARY_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function writeLibrary(items) {
+  localStorage.setItem(LIBRARY_KEY, JSON.stringify(items));
+}
+
+async function saveToLibrary() {
+  const nextTitle = cleanTitle(prompt('Nombre de la cancion', songTitle) || songTitle);
+  if (!nextTitle) return;
+  songTitle = nextTitle;
+  const library = readLibrary();
+  const now = new Date().toISOString();
+  const id = currentLibraryId || `song-${Date.now()}`;
+  currentLibraryId = id;
+  const doc = { ...arrangementDocument(), id, savedAt: now };
+  const index = library.findIndex(item => item.id === id);
+  if (index >= 0) library[index] = doc;
+  else library.unshift(doc);
+  writeLibrary(library);
+  if (backingTrackBlob) {
+    try { await saveBackingBlob(id, backingTrackBlob); }
+    catch (error) {
+      console.error(error);
+      setStatus('Cancion guardada, pero no pude guardar el backing track.');
+      return;
+    }
+  }
+  renderAll();
+  setStatus(`Guardado en biblioteca: ${songTitle}${backingTrackBlob ? ' con backing track' : ''}`);
+}
+
+function renderLibrary() {
+  const list = document.getElementById('library-list');
+  const library = readLibrary();
+  if (!library.length) {
+    list.innerHTML = '<div class="library-meta">Todavia no hay canciones guardadas.</div>';
+    return;
+  }
+  list.innerHTML = library.map(item => `
+    <div class="library-item">
+      <div>
+        <div class="library-title">${escapeHtml(item.title || 'Sin titulo')}</div>
+        <div class="library-meta">${item.arrangement?.length || 0} compases · capo ${item.capo || 0} · backing desde ${Number(item.backingStartSec ?? item.backingOffset ?? 0).toFixed(2)}s · tab entra en ${Number(item.tabDelaySec ?? 0).toFixed(2)}s · ${formatDate(item.savedAt)}</div>
+      </div>
+      <button class="btn" onclick="loadLibrarySong('${item.id}')">Abrir</button>
+      <button class="btn" onclick="deleteLibrarySong('${item.id}')">Eliminar</button>
+    </div>
+  `).join('');
+}
+
+async function loadLibrarySong(id) {
+  const item = readLibrary().find(entry => entry.id === id);
+  if (!item) return;
+  currentLibraryId = item.id;
+  songTitle        = item.title || 'Arreglo de guitarra';
+  capo             = Number(item.capo || 0);
+  // backward-compat: v1/v2 saved a single backingOffset
+  backingStartSec  = Number(item.backingStartSec ?? item.backingOffset ?? 0);
+  tabDelaySec      = Number(item.tabDelaySec     ?? 0);
+  backingTrackName = item.backingTrackName || '';
+  resetBackingState();
+  // restore offset values that resetBackingState zeroed
+  backingStartSec  = Number(item.backingStartSec ?? item.backingOffset ?? 0);
+  tabDelaySec      = Number(item.tabDelaySec ?? 0);
+  try {
+    const storedBacking = await loadBackingBlob(id);
+    if (storedBacking) await attachBackingBlob(storedBacking, backingTrackName);
+  } catch (error) { console.error(error); }
+  arrangement    = item.arrangement || [];
+  currentMeasure = 1;
+  document.getElementById('capo-select').value        = String(capo);
+  if (item.bpm) document.getElementById('bpm-input').value = String(item.bpm);
+  document.getElementById('backing-start-input').value = backingStartSec.toFixed(2);
+  document.getElementById('tab-delay-input').value     = tabDelaySec.toFixed(2);
+  closeLibraryDialog();
+  enterPlayMode();
+  setStatus(`Abierto: ${songTitle}${backingAudioBuffer ? ' con backing track listo' : backingTrackName ? `. Carga el backing: ${backingTrackName}` : ''}`);
+}
+
+async function deleteLibrarySong(id) {
+  const library = readLibrary();
+  const item    = library.find(entry => entry.id === id);
+  if (!item) return;
+  if (!confirm(`Eliminar "${item.title}" de la biblioteca?`)) return;
+  writeLibrary(library.filter(entry => entry.id !== id));
+  try { await deleteBackingBlob(id); } catch (error) { console.error(error); }
+  if (currentLibraryId === id) currentLibraryId = null;
+  renderLibrary();
+}
+
+function formatDate(value) {
+  if (!value) return '';
+  return new Date(value).toLocaleString();
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
+
+function exportArrangement() {
+  const data = arrangementDocument();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `${songTitle.replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase() || 'guitar-arrangement'}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importArrangement(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  loadJsonFile(file);
+  event.target.value = '';
+}
+
+function loadJsonFile(file) {
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!data.arrangement?.length) throw new Error('JSON sin compases válidos');
+
+      // Populate state from JSON
+      songTitle     = cleanTitle(data.title || file.name);
+      capo          = Number(data.capo || 0);
+      backingStartSec = Number(data.backingStartSec ?? data.backingOffset ?? 0);
+      tabDelaySec   = Number(data.tabDelaySec ?? 0);
+      backingTrackName = data.backingTrackName || '';
+      arrangement   = data.arrangement;
+      currentMeasure = 1;
+
+      // Save to library automatically
+      const library = readLibrary();
+      const id = `song-${Date.now()}`;
+      currentLibraryId = id;
+      const doc = {
+        ...data,
+        id,
+        title: songTitle,
+        savedAt: new Date().toISOString()
+      };
+      library.unshift(doc);
+      writeLibrary(library);
+
+      resetBackingState();
+      // Restore offsets that resetBackingState zeroed
+      backingStartSec  = Number(data.backingStartSec ?? data.backingOffset ?? 0);
+      tabDelaySec      = Number(data.tabDelaySec ?? 0);
+
+      document.getElementById('capo-select').value = String(capo);
+      if (data.bpm) document.getElementById('bpm-input').value = String(data.bpm);
+
+      enterPlayMode();
+      setStatus(`"${songTitle}" importado y guardado en biblioteca (${arrangement.length} compases).`);
+    } catch (err) {
+      console.error(err);
+      setStatus('No pude leer ese JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function toggleFullscreen() {
+  if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+  else await document.exitFullscreen();
+}
+
+// ── Library drawer ────────────────────────────────────────
+function openLibraryDrawer() {
+  renderLibrary();
+  document.getElementById('lib-drawer').classList.add('open');
+  document.getElementById('lib-overlay').classList.add('open');
+}
+function closeLibraryDrawer() {
+  document.getElementById('lib-drawer').classList.remove('open');
+  document.getElementById('lib-overlay').classList.remove('open');
+}
+// legacy alias (called from dropzone)
+function openLibraryDialog()  { openLibraryDrawer();  }
+function closeLibraryDialog() { closeLibraryDrawer(); }
+
+// ── Settings panel ────────────────────────────────────────
+function toggleSettingsPanel(e) {
+  e && e.stopPropagation();
+  document.getElementById('settings-panel').classList.toggle('open');
+}
+function closeSettingsPanel() {
+  document.getElementById('settings-panel').classList.remove('open');
+}
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('settings-wrap');
+  if (wrap && !wrap.contains(e.target)) closeSettingsPanel();
+});
+
+// ── Backing volume ────────────────────────────────────────
+function setBackingVolume(val) {
+  backingVolume = Math.max(0, Math.min(1, val));
+  if (backingGainNode) backingGainNode.gain.value = backingVolume;
+  localStorage.setItem('guitarBackingVolume', String(backingVolume));
+}
+
+// ─────────────────────────────────────────────────────────────
+//  KEYBOARD SHORTCUTS
+// ─────────────────────────────────────────────────────────────
+window.addEventListener('keydown', event => {
+  if (event.target.matches('textarea,input,select')) return;
+  if (event.key === 'ArrowRight') changeMeasure(1);
+  if (event.key === 'ArrowLeft')  changeMeasure(-1);
+  if (event.code === 'Space' && mode === 'play') {
+    event.preventDefault();
+    togglePlay();
+  }
+});
+
+window.addEventListener('load', () => {
+  // Restore backing volume
+  const savedVol = parseFloat(localStorage.getItem('guitarBackingVolume'));
+  if (!isNaN(savedVol)) {
+    backingVolume = Math.max(0, Math.min(1, savedVol));
+    const slider = document.getElementById('backing-vol-slider');
+    if (slider) slider.value = String(backingVolume);
+  }
+  setMode('empty');
+});
+</script>
+</body>
+</html>
