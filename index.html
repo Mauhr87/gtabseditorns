@@ -648,6 +648,19 @@ body.empty-mode .toolbar { display: none; }
   flex-shrink: 0;
 }
 .stop-btn:hover { background: #302c27; border-color: #302c27; color: #fff; }
+.loop-btn {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  border: 1.5px solid #57534e;
+  background: transparent;
+  color: #a8a29e;
+  font-size: 16px;
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.loop-btn:hover { border-color: #7c3aed; color: #7c3aed; }
+.loop-btn.active { background: #7c3aed; border-color: #7c3aed; color: #fff; }
 /* ── Library drawer ─────────────────────────────────────── */
 .lib-overlay {
   position: fixed; inset: 0;
@@ -786,7 +799,7 @@ body.empty-mode .toolbar { display: none; }
     </div>
     <div class="control">
       <span>Compas</span>
-      <input id="measure-input" type="number" min="1" value="1" onchange="goMeasure(Number(this.value))">
+      <input id="measure-input" type="number" min="1" value="1" oninput="onStartMeasureChange(this.value)" onchange="onStartMeasureChange(this.value)">
     </div>
     <button class="btn" onclick="changeMeasure(-1)">◀</button>
     <button class="btn" onclick="changeMeasure(1)">▶</button>
@@ -828,8 +841,11 @@ body.empty-mode .toolbar { display: none; }
     <div class="bar-row">
       <button class="play-btn" id="play-btn" onclick="togglePlay()">▶</button>
       <button class="stop-btn" id="stop-btn" onclick="stopPlay()" title="Stop y rebobinar">■</button>
+      <button class="loop-btn" id="loop-btn" onclick="toggleLoop()" title="Repetir en bucle">🔁</button>
       <button class="btn" onclick="changeMeasure(-1)">◀</button>
-      <input id="play-measure-input" type="number" min="1" value="1" onchange="goMeasure(Number(this.value))" style="width:52px">
+      <input id="play-measure-input" type="number" min="1" value="1" oninput="onStartMeasureChange(this.value)" onchange="onStartMeasureChange(this.value)" style="width:52px">
+      <span style="color:#a8a29e;font-size:12px">–</span>
+      <input id="play-end-input" type="number" min="1" value="" placeholder="fin" title="Compás final (vacío = hasta el final)" oninput="clampEndInput(this)" onchange="clampEndInput(this)" style="width:48px">
       <span id="play-total">/ 1</span>
       <button class="btn" onclick="changeMeasure(1)">▶</button>
       <span class="control">BPM <input id="bpm-input" type="number" min="35" max="180" value="70" style="width:50px"></span>
@@ -988,6 +1004,8 @@ let pausedElapsedSec = 0;     // seconds elapsed in sequence at pause time
 let backingCtxStart  = 0;     // AudioContext.currentTime when backing last started
 let backingPosStart  = 0;     // backing file position (s) when backing last started
 let savedStartMeasure = 1;    // measure to reset to on Stop
+let loopEnabled = false;      // loop back to savedStartMeasure when song ends
+let loopEndMeasure = 0;       // 0 = play to end of arrangement
 let tabMuted = false;
 
 // ─────────────────────────────────────────────────────────────
@@ -1231,9 +1249,12 @@ function renderAll() {
   document.getElementById('song-title').textContent = songTitle;
   document.getElementById('measure-input').value = currentMeasure;
   document.getElementById('play-measure-input').value = currentMeasure;
+  validateLoopRange(currentMeasure); // keep end field >= current measure
   document.getElementById('backing-start-input').value = String(Number(backingStartSec || 0).toFixed(2));
   document.getElementById('tab-delay-input').value     = String(Number(tabDelaySec     || 0).toFixed(2));
   document.getElementById('play-total').textContent = `/ ${arrangement.length}`;
+  const endInput = document.getElementById('play-end-input');
+  if (endInput) endInput.max = String(arrangement.length);
   document.getElementById('subtitle').textContent =
     `${arrangement.length} compases · capo ${capo} · ${mode === 'edit' ? 'editando arreglo' : 'modo play'}`;
 }
@@ -1624,6 +1645,55 @@ function forceDisableBacking() {
   showToast('⚠️ Backing desactivado — tempo cambiado. Original: ' + backingOriginalBpm + ' BPM', true);
 }
 
+function toggleLoop() {
+  loopEnabled = !loopEnabled;
+  document.getElementById('loop-btn').classList.toggle('active', loopEnabled);
+}
+
+function setLoopEnd(val) {
+  const n = parseInt(val);
+  loopEndMeasure = (!val || isNaN(n) || n < 1) ? 0 : Math.min(n, arrangement.length);
+}
+
+function clampEndInput(el) {
+  const startEl = document.getElementById('play-measure-input');
+  const startVal = parseInt(startEl?.value) || 1;
+  if (!el.value) { setLoopEnd(''); return; } // vacío = hasta el final
+  let endVal = parseInt(el.value) || 0;
+  if (endVal < startVal) {
+    endVal = Math.min(startVal, arrangement.length || startVal);
+    el.value = String(endVal);
+  }
+  setLoopEnd(String(endVal));
+}
+
+function onStartMeasureChange(val) {
+  const n = parseInt(val) || 1;
+  goMeasure(n);
+  validateLoopRange(n);
+}
+
+function validateLoopRange(newStart) {
+  const endEl = document.getElementById('play-end-input');
+  if (!endEl) return;
+  // Update min so the browser spinner can't go below start+1
+  endEl.min = String(newStart);
+  if (!endEl.value) return; // vacío = hasta el final
+  const endVal = parseInt(endEl.value) || 0;
+  if (endVal > 0 && endVal < newStart) {
+    const newEnd = Math.min(newStart, arrangement.length);
+    endEl.value = String(newEnd);
+    setLoopEnd(String(newEnd));
+  }
+}
+
+function getEffectiveEndIdx() {
+  // Returns the last measure index (0-based) to play
+  if (loopEndMeasure > 0 && loopEndMeasure <= arrangement.length)
+    return loopEndMeasure - 1;
+  return arrangement.length - 1;
+}
+
 function checkBackingBpm() {
   if (!backingAudioBuffer) return;
   if (backingOriginalBpm <= 0) { backingOriginalBpm = getBpm(); return; }
@@ -1696,7 +1766,8 @@ function startBackingAt(fromSeconds, atAudioTime) {
   backingSourceNode.start(atAudioTime, safeFrom);
   backingCtxStart = atAudioTime;
   backingPosStart = safeFrom;
-  backingSourceNode.onended = () => { backingSourceNode = null; };
+  const _src = backingSourceNode;
+  backingSourceNode.onended = () => { if (backingSourceNode === _src) backingSourceNode = null; };
 }
 
 /**
@@ -2017,8 +2088,9 @@ function toggleMuteTab() {
  */
 function buildScheduleMap(originTime, fromIdx) {
   const map = [];
-  const ms = measureSeconds();
-  for (let i = fromIdx; i < arrangement.length; i++) {
+  const ms  = measureSeconds();
+  const endIdx = getEffectiveEndIdx();
+  for (let i = fromIdx; i <= endIdx; i++) {
     map.push({
       measureIdx: i,
       audioStartTime: originTime + ((i - fromIdx) * ms)
@@ -2063,7 +2135,7 @@ function schedulerTick(rafTimestamp) {
 
     const rawIdx      = Math.floor(elapsedSec / ms);
     const absoluteIdx = schedStartMeasure + rawIdx;
-    const clampedIdx  = Math.max(schedStartMeasure, Math.min(arrangement.length - 1, absoluteIdx));
+    const clampedIdx  = Math.max(schedStartMeasure, Math.min(getEffectiveEndIdx(), absoluteIdx));
 
     // ── Measure highlight ──
     if (currentMeasure !== clampedIdx + 1) {
@@ -2093,12 +2165,24 @@ function schedulerTick(rafTimestamp) {
 
   // ── END OF SONG ────────────────────────────────────────────
   if (schedMapPos >= scheduleMap.length) {
-    // All measures are scheduled; wait until the last one finishes, then stop
+    // All measures are scheduled; wait until the last one finishes
+    if (!scheduleMap.length) { stopPlay(); return; } // rango vacío/imposible
     const lastEntry = scheduleMap[scheduleMap.length - 1];
     const endTime   = lastEntry.audioStartTime + measureSeconds();
     if (now >= endTime) {
-      stopPlayback();
-      return;
+      if (loopEnabled) {
+        // Restart from savedStartMeasure
+        stopPlayback();
+        currentMeasure = savedStartMeasure;
+        // Reset display immediately so inputs show start measure again
+        document.getElementById('measure-input').value      = currentMeasure;
+        document.getElementById('play-measure-input').value = currentMeasure;
+        startPlayback();
+        return;
+      } else {
+        stopPlay(); // resetea currentMeasure a savedStartMeasure y actualiza inputs
+        return;
+      }
     }
   }
 
@@ -2590,6 +2674,12 @@ window.addEventListener('load', () => {
     if (bpmEl) {
       bpmEl.addEventListener('input',  function() { checkBackingBpm(); });
       bpmEl.addEventListener('change', function() { checkBackingBpm(); });
+    }
+    // Wire top measure field via addEventListener (more reliable than inline oninput)
+    const topMeasure = document.getElementById('measure-input');
+    if (topMeasure) {
+      topMeasure.addEventListener('input',  function() { onStartMeasureChange(this.value); });
+      topMeasure.addEventListener('change', function() { onStartMeasureChange(this.value); });
     }
   });
   </script>
