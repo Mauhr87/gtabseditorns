@@ -170,9 +170,22 @@ body.play-mode .measure-card {
   background: #ede9fe;
   color: #5b21b6;
 }
+.chord-chip.evt-0 { color: #5b21b6; background: #ede9fe; }
+.chord-chip.evt-1 { color: #065f46; background: #dff7ef; }
+.chord-chip.evt-2 { color: #92400e; background: #fef3c7; }
+.chord-chip.evt-3 { color: #1e3a8a; background: #dbeafe; }
 .chord-chip small {
   color: #7b7289;
   font-size: 10px;
+}
+.imported-chord-row {
+  margin-top: 7px;
+}
+.imported-chord-row .chord-chip {
+  background: #ede9fe;
+}
+.imported-chord-empty {
+  min-height: 20px;
 }
 .original-chord {
   margin-top: 4px;
@@ -249,7 +262,7 @@ body.play-mode .measure-card {
 }
 .measure-number-row, .beat-row, .rhythm-row, .tab-line {
   display: grid;
-  grid-template-columns: 28px repeat(var(--cols), 28px);
+  grid-template-columns: var(--label-w, 28px) repeat(var(--cols), var(--cell-w, 28px));
   min-width: max-content;
 }
 .measure-number-cell, .beat-cell, .rhythm-cell {
@@ -289,12 +302,22 @@ body.play-mode .measure-card {
 }
 .tab-cell {
   height: 24px;
-  border-top: 1px solid #8b8580;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
+}
+.tab-cell::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px solid #8b8580;
+  transform: translateY(-50%);
+  z-index: 0;
+  pointer-events: none;
 }
 .tab-cell.bar { border-left: 2px solid #2e2b27; }
 .tab-cell.active-measure { background: rgba(124,58,237,.055); }
@@ -305,11 +328,60 @@ body.play-mode .measure-card {
   border-radius: 3px;
   padding: 0 2px;
   font-weight: 800;
+  position: relative;
+  z-index: 1;
 }
 .tab-cell.chord span { color: #047857; }
 .tab-cell.arp span { color: #9a3412; background: #fff2cc; }
 .tab-cell.melody span { color: #1d4ed8; background: #dbeafe; }
 .tab-cell.muted span { color: #999; }
+.tab-cell.gp-note-cell span {
+  color: #111827;
+  background: #fff;
+  min-width: 16px;
+  padding: 0 3px;
+}
+.tab-cell.tie-origin::after,
+.tab-cell.legato-origin::after {
+  content: "";
+  position: absolute;
+  left: 58%;
+  right: -58%;
+  top: calc(50% - 12px);
+  height: 10px;
+  border-top: 2px solid #6b7280;
+  border-radius: 50% 50% 0 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.tab-cell.legato-origin::after {
+  border-top-color: #7c3aed;
+}
+.tab-cell.slide-origin::after {
+  content: "/";
+  position: absolute;
+  right: -6px;
+  top: calc(50% - 7px);
+  color: #6b7280;
+  font-weight: 900;
+  pointer-events: none;
+  z-index: 2;
+}
+.gp-tech-label {
+  position: absolute;
+  right: 1px;
+  top: -14px;
+  color: #7c3aed;
+  background: transparent;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+.gp-duration-label {
+  color: #6b7280;
+  font-size: 9px;
+  font-weight: 800;
+}
 
 /* ── Beat bar en tarjetas ── */
 .beat-bar-wrap {
@@ -956,7 +1028,9 @@ textarea:focus {
 .measure-top {
   color: var(--muted);
   letter-spacing: 0.03em;
-  text-transform: uppercase;
+  justify-content: start;
+  font-size: 9px;
+  text-transform: none;
 }
 .chord-name {
   color: var(--purple);
@@ -966,6 +1040,22 @@ textarea:focus {
   border-radius: 999px;
   background: var(--violet-soft);
   color: var(--purple);
+}
+.chord-chip.evt-0 {
+  color: var(--purple);
+  background: var(--violet-soft);
+}
+.chord-chip.evt-1 {
+  color: var(--accent);
+  background: #dcfce7;
+}
+.chord-chip.evt-2 {
+  color: var(--amber);
+  background: var(--amber-soft);
+}
+.chord-chip.evt-3 {
+  color: var(--blue);
+  background: #eaf1ff;
 }
 .original-chord,
 .pattern-name,
@@ -1021,7 +1111,7 @@ textarea:focus {
 .beat-row,
 .rhythm-row,
 .tab-line {
-  grid-template-columns: 34px repeat(var(--cols), 30px);
+  grid-template-columns: var(--label-w, 34px) repeat(var(--cols), var(--cell-w, 30px));
 }
 .measure-number-cell,
 .beat-cell,
@@ -1041,7 +1131,10 @@ textarea:focus {
   font-weight: 800;
 }
 .tab-cell {
-  border-top: 1px solid #7d8794;
+  border-top: 0;
+}
+.tab-cell::before {
+  border-top-color: #7d8794;
 }
 .tab-cell.bar {
   border-left: 2px solid #1f2937;
@@ -1065,6 +1158,142 @@ textarea:focus {
 .tab-cell.melody span {
   color: var(--blue);
   background: #eaf1ff;
+}
+.tab-cell.gp-note-cell span {
+  color: #111827;
+  background: #fff;
+  min-width: 16px;
+  padding: 0 3px;
+}
+.tab-cell.tie-destination span,
+.tab-cell.ghost-note span {
+  color: #6b7280;
+}
+.tab-cell.dead-note span {
+  color: #71717a;
+  background: #f3f4f6;
+}
+.tab-cell .gp-tech-label {
+  position: absolute;
+  right: 1px;
+  top: -14px;
+  min-width: 0;
+  padding: 0;
+  color: #7c3aed;
+  background: transparent;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+  z-index: 3;
+}
+.tab-cell .gp-duration-label {
+  color: #6b7280;
+  background: transparent;
+  font-size: 9px;
+  font-weight: 800;
+}
+.tab-note-value {
+  cursor: pointer;
+  outline: none;
+}
+.tab-note-value:hover,
+.tab-note-value.selected-tab-note {
+  color: #fff !important;
+  background: var(--purple) !important;
+  box-shadow: 0 0 0 2px rgba(124,58,237,0.22);
+}
+.note-inspector {
+  position: fixed;
+  left: 18px;
+  right: 18px;
+  bottom: 104px;
+  z-index: 60;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(148,163,184,0.45);
+  border-radius: 14px;
+  background: rgba(17,24,39,0.94);
+  color: #f8fafc;
+  box-shadow: 0 18px 48px rgba(15,23,42,0.32);
+  backdrop-filter: blur(14px);
+  overflow-x: auto;
+}
+.note-inspector.visible {
+  display: flex;
+}
+.note-inspector-title {
+  min-width: 148px;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.25;
+  color: #fff;
+}
+.note-inspector-title small {
+  display: block;
+  margin-top: 2px;
+  color: #cbd5e1;
+  font-size: 10px;
+  font-weight: 700;
+}
+.note-inspector-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  white-space: nowrap;
+}
+.note-inspector label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #dbe4ee;
+  font-size: 11px;
+  font-weight: 800;
+}
+.note-inspector input,
+.note-inspector select {
+  min-height: 28px;
+  height: 28px;
+  border: 1px solid rgba(203,213,225,0.38);
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  font-size: 12px;
+}
+.note-inspector input {
+  width: 54px;
+}
+.note-inspector select {
+  width: 58px;
+}
+.note-action {
+  min-width: 30px;
+  min-height: 28px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 8px;
+  background: rgba(255,255,255,0.12);
+  color: #f8fafc;
+  cursor: pointer;
+  font-weight: 900;
+}
+.note-action:hover {
+  background: rgba(255,255,255,0.22);
+}
+.note-action:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+.note-action.active {
+  background: #7c3aed;
+  color: #fff;
+}
+.note-action.danger {
+  background: #ef4444;
 }
 
 .bottom-bar {
@@ -1377,8 +1606,8 @@ textarea {
         <button id="edit-mode-btn" class="active" onclick="setMode('edit')">Editar</button>
         <button id="play-mode-btn" onclick="setMode('play')">Play</button>
       </div>
-      <button class="btn" onclick="document.getElementById('musicxml-input').click()">Cargar MusicXML</button>
-      <input id="musicxml-input" type="file" accept=".xml,.musicxml" hidden onchange="readMusicXml(event)">
+      <button class="btn" onclick="document.getElementById('musicxml-input').click()">Cargar partitura</button>
+      <input id="musicxml-input" type="file" accept=".xml,.musicxml,.gp,.gpif" hidden onchange="readScoreFile(event)">
       <input id="json-input" type="file" accept=".json" hidden onchange="importArrangement(event)">
       <button class="btn" onclick="saveToLibrary()">Guardar</button>
       <button class="btn biblioteca" onclick="openLibraryDrawer()">📚 Biblioteca</button>
@@ -1431,8 +1660,8 @@ textarea {
       <div class="dropzone-box" id="dropzone-box"
         onclick="document.getElementById('musicxml-input').click()">
         <div class="dropzone-icon">📄</div>
-        <div class="dropzone-title">Arrastra tu archivo MusicXML aquí</div>
-        <div class="dropzone-sub">o haz clic para buscar en tu computadora<br>.xml · .musicxml · .json</div>
+        <div class="dropzone-title">Arrastra tu partitura aquí</div>
+        <div class="dropzone-sub">o haz clic para buscar en tu computadora<br>.xml · .musicxml · .gp · .gpif · .json</div>
       </div>
 
       <div class="dropzone-divider">o también</div>
@@ -1487,6 +1716,7 @@ textarea {
     </div>
   </footer>
   <audio id="backing-audio" class="backing-audio"></audio>
+  <div class="note-inspector" id="note-inspector"></div>
 </div>
 
 <dialog id="chord-dialog">
@@ -1617,6 +1847,11 @@ let savedStartMeasure = 1;    // measure to reset to on Stop
 let loopEnabled = false;      // loop back to savedStartMeasure when song ends
 let loopEndMeasure = 0;       // 0 = play to end of arrangement
 let tabMuted = false;
+let selectedTabNote = null;   // { measure, noteKey } for imported GP notes
+let undoStack = [];
+let redoStack = [];
+let pendingNoteEditSnapshot = null;
+const HISTORY_LIMIT = 60;
 
 // ─────────────────────────────────────────────────────────────
 //  AUDIO ENGINE STATE  (v2 — precision lookahead scheduler)
@@ -1630,6 +1865,7 @@ let toneLoadPromise = null;
 let backingAudioBuffer = null;   // decoded AudioBuffer
 let backingSourceNode = null;    // currently playing BufferSourceNode
 let backingGainNode = null;
+let backingDecodePromise = null;
 
 // Precision scheduler state
 let schedulerRafId = null;       // requestAnimationFrame handle
@@ -1800,11 +2036,119 @@ function eventAtSlot(measure, slot) {
   return active;
 }
 
+function isImportedTabMeasure(measure) {
+  return Boolean(measure?.importedTab);
+}
+
+function hasImportedTabArrangement() {
+  return arrangement.some(isImportedTabMeasure);
+}
+
+function measureColumnCount(measure) {
+  return Math.max(1, Number(measure?.importedTab?.cols || 8));
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+
+function importedNoteKey(note) {
+  return String(note?.id ?? `${note?.stringIndex}-${note?.col}-${note?.fret}-${note?.midi ?? ''}`);
+}
+
+function isSelectedImportedNote(measure, note) {
+  return Boolean(
+    selectedTabNote &&
+    Number(selectedTabNote.measure) === Number(measure?.measure) &&
+    selectedTabNote.noteKey === importedNoteKey(note)
+  );
+}
+
+function findImportedNoteRef(selection = selectedTabNote) {
+  if (!selection) return null;
+  const measure = arrangement.find(item => Number(item.measure) === Number(selection.measure));
+  if (!measure?.importedTab?.notes) return null;
+  const note = measure.importedTab.notes.find(item => importedNoteKey(item) === selection.noteKey);
+  return note ? { measure, tab: measure.importedTab, note } : null;
+}
+
+function clearSelectedTabNote() {
+  selectedTabNote = null;
+  pendingNoteEditSnapshot = null;
+  renderNoteInspector();
+}
+
+function makeHistorySnapshot() {
+  return {
+    arrangement: JSON.parse(JSON.stringify(arrangement)),
+    selectedTabNote: selectedTabNote ? { ...selectedTabNote } : null,
+    currentMeasure
+  };
+}
+
+function restoreHistorySnapshot(snapshot) {
+  if (!snapshot) return;
+  arrangement = JSON.parse(JSON.stringify(snapshot.arrangement || []));
+  selectedTabNote = snapshot.selectedTabNote ? { ...snapshot.selectedTabNote } : null;
+  currentMeasure = Math.max(1, Math.min(arrangement.length || 1, Number(snapshot.currentMeasure || 1)));
+  pendingNoteEditSnapshot = null;
+  renderAll();
+  syncScrollToCurrentMeasure();
+}
+
+function resetHistory() {
+  undoStack = [];
+  redoStack = [];
+  pendingNoteEditSnapshot = null;
+}
+
+function beginHistoryChange() {
+  pendingNoteEditSnapshot = makeHistorySnapshot();
+}
+
+function commitHistoryChange() {
+  if (!pendingNoteEditSnapshot) return;
+  undoStack.push(pendingNoteEditSnapshot);
+  if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
+  redoStack = [];
+  pendingNoteEditSnapshot = null;
+  renderNoteInspector();
+}
+
+function undoEdit() {
+  if (!undoStack.length) return;
+  const current = makeHistorySnapshot();
+  const previous = undoStack.pop();
+  redoStack.push(current);
+  restoreHistorySnapshot(previous);
+  setStatus('Deshecho.');
+}
+
+function redoEdit() {
+  if (!redoStack.length) return;
+  const current = makeHistorySnapshot();
+  const next = redoStack.pop();
+  undoStack.push(current);
+  restoreHistorySnapshot(next);
+  setStatus('Rehecho.');
+}
+
+document.addEventListener('keydown', event => {
+  const isUndo = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z';
+  if (!isUndo) return;
+  event.preventDefault();
+  if (event.shiftKey) redoEdit();
+  else undoEdit();
+});
+
 // ─────────────────────────────────────────────────────────────
 //  UI
 // ─────────────────────────────────────────────────────────────
 function setMode(nextMode) {
   mode = nextMode;
+  if (mode !== 'edit') clearSelectedTabNote();
   document.body.classList.toggle('empty-mode', mode === 'empty');
   document.body.classList.toggle('play-mode',  mode === 'play');
   document.getElementById('edit-mode-btn').classList.toggle('active', mode === 'edit');
@@ -1816,6 +2160,7 @@ function setMode(nextMode) {
 
 function enterPlayMode() {
   mode = 'play';
+  clearSelectedTabNote();
   document.body.classList.remove('empty-mode');
   document.body.classList.add('play-mode');
   document.getElementById('edit-mode-btn').classList.remove('active');
@@ -1836,11 +2181,11 @@ function handleDrop(event) {
   event.preventDefault();
   document.getElementById('dropzone-box').classList.remove('drag-over');
   const files = [...(event.dataTransfer?.files || [])];
-  const xml  = files.find(f => /\.(xml|musicxml)$/i.test(f.name));
-  const json = files.find(f => /\.json$/i.test(f.name));
-  if (xml)       { loadMusicXmlFile(xml); return; }
-  if (json)      { loadJsonFile(json);    return; }
-  setStatus('Solo se aceptan archivos .xml, .musicxml o .json');
+  const score = files.find(f => /\.(xml|musicxml|gp|gpif)$/i.test(f.name));
+  const json  = files.find(f => /\.json$/i.test(f.name));
+  if (score)     { loadScoreFile(score); return; }
+  if (json)      { loadJsonFile(json);   return; }
+  setStatus('Solo se aceptan archivos .xml, .musicxml, .gp, .gpif o .json');
 }
 
 function setCapo(nextCapo) {
@@ -1856,6 +2201,7 @@ function setStatus(text) {
 function renderAll() {
   renderChordStrip();
   renderTab();
+  renderNoteInspector();
   document.getElementById('song-title').textContent = songTitle;
   document.getElementById('measure-input').value = currentMeasure;
   document.getElementById('play-measure-input').value = currentMeasure;
@@ -1904,30 +2250,60 @@ function renderChordStrip() {
   const wrap = document.getElementById('chord-strip');
   wrap.innerHTML = '';
   arrangement.forEach(measure => {
+    const importedTab = measure.importedTab;
     const events = measureEvents(measure);
     const firstEvent = events[0];
-    const shownChord = displayEventChord(firstEvent);
     const card = document.createElement('div');
-    card.className = `measure-card${events.length > 1 ? ' multi-chord' : ''}${measure.measure === currentMeasure ? ' active' : ''}`;
+    const hasImportedChords = importedTab && chordEventsForMeasure(measure).length > 0;
+    card.className = `measure-card${events.length > 1 ? ' multi-chord' : ''}${hasImportedChords ? ' imported-with-chords' : ''}${measure.measure === currentMeasure ? ' active' : ''}`;
     card.onclick = () => goMeasure(measure.measure);
-    const editControls = mode === 'edit' ? `
+    const editControls = mode === 'edit' && !importedTab ? `
       <div class="measure-edit" onclick="event.stopPropagation()">
         ${events.map((eventItem, eventIndex) => renderEventControls(measure, eventItem, eventIndex)).join('')}
       </div>` : '';
-    const chordHtml = events.length > 1
-      ? events.map(event => `<span class="chord-chip">${displayEventChord(event)} <small>${BEAT_LABELS[event.startSlot] || '1'}</small></span>`).join('')
-      : shownChord;
-    const originalHtml = events.length > 1
-      ? `original: ${events.map(event => `${event.originalChord}@${BEAT_LABELS[event.startSlot] || '1'}`).join(' · ')}`
-      : `original: ${firstEvent.originalChord}`;
     card.innerHTML = `
-      <div class="measure-top"><span>${measure.measure}</span><span>${FORMAT_LABELS[firstEvent.format]}</span></div>
-      ${renderBeatBar(measure)}
-      <div class="pattern-name">${getEventPattern(firstEvent).name}</div>
+      <div class="measure-top"><span>${measure.measure}</span><span>${importedTab ? (hasImportedChords ? 'ACORDES + TAB' : 'TAB GP') : FORMAT_LABELS[firstEvent.format]}</span></div>
+      ${importedTab ? renderImportedChordSummary(measure) : ''}
+      ${importedTab ? renderImportedMeasureMini(measure) : renderBeatBar(measure)}
+      <div class="pattern-name">${importedTab ? `${importedTab.noteCount || 0} notas · ${importedTab.time || '4/4'}` : getEventPattern(firstEvent).name}</div>
       ${editControls}
     `;
     wrap.appendChild(card);
   });
+}
+
+function chordEventsForMeasure(measure) {
+  return measureEvents(measure).filter(event =>
+    event?.originalChord && !['TAB', 'rest'].includes(event.originalChord)
+  );
+}
+
+function renderImportedChordSummary(measure) {
+  const chords = chordEventsForMeasure(measure);
+  if (!chords.length) return '<div class="imported-chord-empty"></div>';
+  if (chords.length === 1) {
+    return `<div class="chord-name">${escapeHtml(displayEventChord(chords[0]))}</div>`;
+  }
+  return `<div class="chord-name multi imported-chord-row">${
+    chords.map((event, index) => `<span class="chord-chip evt-${index % 4}">${escapeHtml(displayEventChord(event))} <small>${BEAT_LABELS[event.startSlot] || '1'}</small></span>`).join('')
+  }</div>`;
+}
+
+function renderImportedMeasureMini(measure) {
+  const tab = measure.importedTab;
+  const cols = Math.max(1, tab?.cols || 8);
+  const activeCols = new Set((tab?.notes || []).map(note => note.col));
+  const chordEvents = chordEventsForMeasure(measure);
+  const eventColorMap = new Map(chordEvents.map((ev, index) => [ev, index]));
+  const cells = Array.from({ length: 8 }, (_, index) => {
+    const start = Math.floor((index / 8) * cols);
+    const end = Math.floor(((index + 1) / 8) * cols);
+    const hasNote = [...activeCols].some(col => col >= start && col < Math.max(end, start + 1));
+    const activeEvent = chordEvents.length ? eventAtSlot(measure, index) : null;
+    const colorIdx = activeEvent ? (eventColorMap.get(activeEvent) ?? 0) : 0;
+    return `<div class="beat-slot evt-${colorIdx % 4} ${hasNote ? 'strong' : 'weak'}">${hasNote ? '•' : ''}</div>`;
+  }).join('');
+  return `<div class="beat-bar-wrap"><div class="beat-bar" id="beat-bar-${measure.measure}">${cells}<div class="beat-cursor" id="beat-cursor-${measure.measure}"></div></div></div>`;
 }
 
 function renderEventControls(measure, eventItem, eventIndex) {
@@ -1971,7 +2347,17 @@ function renderCustomButtons(measure, eventIndex = 0) {
 }
 
 function renderTab() {
+  if (arrangement.some(isImportedTabMeasure)) {
+    renderImportedTab();
+    return;
+  }
+  renderGeneratedTab();
+}
+
+function renderGeneratedTab() {
   const panel = document.getElementById('tab-panel');
+  panel.style.setProperty('--cell-w', '30px');
+  panel.style.setProperty('--label-w', '34px');
   const colsPerMeasure = 8;
   const totalCols = arrangement.length * colsPerMeasure;
   panel.style.setProperty('--cols', totalCols);
@@ -2030,6 +2416,328 @@ function renderTab() {
   panel.innerHTML = html;
 }
 
+function renderImportedTab() {
+  const panel = document.getElementById('tab-panel');
+  panel.style.setProperty('--cell-w', '18px');
+  panel.style.setProperty('--label-w', '34px');
+  const measureCols = arrangement.map(measureColumnCount);
+  const totalCols = measureCols.reduce((sum, cols) => sum + cols, 0);
+  panel.style.setProperty('--cols', totalCols);
+
+  let html = `<div class="tab-system imported-tab"><div class="measure-number-row" style="--cols:${totalCols}"><div></div>`;
+  arrangement.forEach((measure, measureIndex) => {
+    const cols = measureCols[measureIndex];
+    for (let c = 0; c < cols; c++) {
+      html += `<div class="measure-number-cell">${c === 0 ? escapeHtml(measure.measure) : ''}</div>`;
+    }
+  });
+  html += `</div><div class="beat-row" style="--cols:${totalCols}"><div></div>`;
+  arrangement.forEach((measure, measureIndex) => {
+    const tab = measure.importedTab;
+    const cols = measureCols[measureIndex];
+    const grid = tab?.gridPerQuarter || (cols / 4);
+    for (let c = 0; c < cols; c++) {
+      html += `<div class="beat-cell">${importedBeatLabel(c, grid)}</div>`;
+    }
+  });
+  html += `</div><div class="rhythm-row" style="--cols:${totalCols}"><div></div>`;
+  arrangement.forEach((measure, measureIndex) => {
+    const tab = measure.importedTab;
+    const cols = measureCols[measureIndex];
+    const rhythmByCol = new Map((tab?.beats || []).map(beat => [beat.col, beat.rhythmLabel]));
+    for (let c = 0; c < cols; c++) {
+      const label = rhythmByCol.get(c) || '';
+      html += `<div class="rhythm-cell"><span class="gp-duration-label">${escapeHtml(label)}</span></div>`;
+    }
+  });
+  html += '</div>';
+
+  STRINGS.forEach((stringName, sIndex) => {
+    html += `<div class="tab-line" style="--cols:${totalCols}"><div class="string-label">${stringName}</div>`;
+    arrangement.forEach((measure, measureIndex) => {
+      const tab = measure.importedTab;
+      const cols = measureCols[measureIndex];
+      const notesByCol = new Map();
+      (tab?.notes || [])
+        .filter(note => note.stringIndex === sIndex)
+        .forEach(note => {
+          if (!notesByCol.has(note.col)) notesByCol.set(note.col, []);
+          notesByCol.get(note.col).push(note);
+        });
+      for (let c = 0; c < cols; c++) {
+        const notes = notesByCol.get(c) || [];
+        const atBar = c === 0;
+        const active = measure.measure === currentMeasure ? ' active-measure' : '';
+        const classNames = ['tab-cell'];
+        if (atBar) classNames.push('bar');
+        if (active) classNames.push('active-measure');
+        if (notes.length) {
+          classNames.push('gp-note-cell', ...importedCellClasses(notes));
+        }
+        html += `<div class="${classNames.join(' ')}">${renderImportedNotes(notes, measure)}</div>`;
+      }
+    });
+    html += '</div>';
+  });
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+function importedBeatLabel(col, gridPerQuarter) {
+  if (!gridPerQuarter) return '';
+  const beat = col / gridPerQuarter;
+  const rounded = Math.round(beat * 1000) / 1000;
+  if (Math.abs(rounded - Math.round(rounded)) < 0.001) return String(Math.round(rounded) + 1);
+  if (Math.abs((rounded % 1) - 0.5) < 0.001) return '&';
+  return '';
+}
+
+function importedCellClasses(notes) {
+  const classes = new Set();
+  notes.forEach(note => {
+    (note.techniques || []).forEach(tech => classes.add(`${tech}-note`));
+    if (note.tieOrigin) classes.add('tie-origin');
+    if (note.tieDestination) classes.add('tie-destination');
+    if (note.legatoOrigin) classes.add('legato-origin');
+    if (note.slideOrigin) classes.add('slide-origin');
+    if (note.dead) classes.add('dead-note');
+    if (note.ghost) classes.add('ghost-note');
+  });
+  return [...classes];
+}
+
+function renderImportedNotes(notes, measure) {
+  if (!notes.length) return '';
+  const main = notes.map(note => {
+    const selected = isSelectedImportedNote(measure, note);
+    return `<span class="tab-note-value${selected ? ' selected-tab-note' : ''}"
+      data-measure="${escapeHtml(measure.measure)}"
+      data-note-key="${escapeHtml(importedNoteKey(note))}"
+      onclick="selectImportedNoteFromElement(this); event.stopPropagation()"
+      onkeydown="handleImportedNoteKeydown(event, this)"
+      tabindex="0"
+      title="${escapeHtml(note.title || '')}">${escapeHtml(formatImportedFret(note))}</span>`;
+  }).join('');
+  const tech = importedTechniqueLabel(notes);
+  return `${main}${tech ? `<span class="gp-tech-label">${escapeHtml(tech)}</span>` : ''}`;
+}
+
+function formatImportedFret(note) {
+  const fret = note.dead ? 'x' : String(note.fret ?? '');
+  if (note.ghost || note.tieDestination) return `(${fret})`;
+  if (note.harmonic) return `<${fret}>`;
+  return fret;
+}
+
+function importedTechniqueLabel(notes) {
+  const labels = [];
+  notes.forEach(note => {
+    if (note.legatoLabel) labels.push(note.legatoLabel);
+    if (note.bend) labels.push('b');
+    if (note.vibrato) labels.push('~');
+    if (note.trill) labels.push('tr');
+    if (note.letRing) labels.push('let');
+    if (note.palmMute) labels.push('PM');
+    if (note.grace) labels.push('gr');
+  });
+  return [...new Set(labels)].slice(0, 2).join(' ');
+}
+
+function selectImportedNoteFromElement(el) {
+  selectImportedNote(Number(el.dataset.measure), el.dataset.noteKey);
+}
+
+function handleImportedNoteKeydown(event, el) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  selectImportedNoteFromElement(el);
+}
+
+function selectImportedNote(measureNumber, noteKey) {
+  if (mode !== 'edit') {
+    setStatus('Cambia a modo Editar para editar notas de la tablatura.');
+    return;
+  }
+  selectedTabNote = { measure: Number(measureNumber), noteKey: String(noteKey) };
+  currentMeasure = Math.max(1, Math.min(arrangement.length, Number(measureNumber) || currentMeasure));
+  renderAll();
+  setStatus('Nota seleccionada. Ajusta traste, cuerda, posicion o tecnica en el inspector.');
+}
+
+function renderNoteInspector() {
+  const el = document.getElementById('note-inspector');
+  if (!el) return;
+  if (mode !== 'edit') {
+    el.classList.remove('visible');
+    el.innerHTML = '';
+    return;
+  }
+  const ref = findImportedNoteRef();
+  if (!ref) {
+    el.classList.remove('visible');
+    el.innerHTML = '';
+    return;
+  }
+  const { measure, tab, note } = ref;
+  const fretValue = Number.isFinite(Number(note.fret)) ? Number(note.fret) : 0;
+  el.classList.add('visible');
+  el.innerHTML = `
+    <div class="note-inspector-title">
+      Nota · compas ${escapeHtml(measure.measure)}
+      <small>${escapeHtml(STRINGS[note.stringIndex] || '?')} · columna ${Number(note.col || 0) + 1}/${tab.cols || 1}</small>
+    </div>
+    <div class="note-inspector-group">
+      <label>Traste <input type="number" min="0" max="36" value="${escapeHtml(fretValue)}" onchange="setSelectedNoteFret(Number(this.value))"></label>
+      <label>Cuerda <select onchange="setSelectedNoteString(Number(this.value))">
+        ${STRINGS.map((name, index) => `<option value="${index}" ${index === note.stringIndex ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}
+      </select></label>
+    </div>
+    <div class="note-inspector-group">
+      <button class="note-action" onclick="moveSelectedNoteString(-1)" title="Subir cuerda">↑</button>
+      <button class="note-action" onclick="moveSelectedNoteString(1)" title="Bajar cuerda">↓</button>
+      <button class="note-action" onclick="moveSelectedNoteCol(-1)" title="Mover antes">←</button>
+      <button class="note-action" onclick="moveSelectedNoteCol(1)" title="Mover despues">→</button>
+    </div>
+    <div class="note-inspector-group">
+      ${noteToggleButton('legatoOrigin', 'H/P', note.legatoOrigin)}
+      ${noteToggleButton('slideOrigin', 'sl', note.slideOrigin)}
+      ${noteToggleButton('bend', 'b', note.bend)}
+      ${noteToggleButton('vibrato', '~', note.vibrato)}
+      ${noteToggleButton('tieOrigin', 'tie', note.tieOrigin)}
+      ${noteToggleButton('letRing', 'let', note.letRing)}
+      ${noteToggleButton('palmMute', 'PM', note.palmMute)}
+      ${noteToggleButton('ghost', '( )', note.ghost)}
+      ${noteToggleButton('dead', 'x', note.dead)}
+    </div>
+    <div class="note-inspector-group">
+      <button class="note-action" onclick="undoEdit()" ${undoStack.length ? '' : 'disabled'} title="Deshacer">↶</button>
+      <button class="note-action" onclick="redoEdit()" ${redoStack.length ? '' : 'disabled'} title="Rehacer">↷</button>
+    </div>
+    <div class="note-inspector-group">
+      <button class="note-action danger" onclick="deleteSelectedNote()" title="Borrar nota">Borrar</button>
+      <button class="note-action" onclick="clearSelectedTabNote(); renderAll()" title="Cerrar">Cerrar</button>
+    </div>`;
+}
+
+function noteToggleButton(flag, label, active) {
+  return `<button class="note-action${active ? ' active' : ''}" onclick="toggleSelectedNoteFlag('${flag}')">${escapeHtml(label)}</button>`;
+}
+
+function updateSelectedNote(mutator) {
+  const ref = findImportedNoteRef();
+  if (!ref) return;
+  beginHistoryChange();
+  mutator(ref.note, ref.measure, ref.tab);
+  normalizeImportedNoteAfterEdit(ref.note);
+  resolveImportedNoteCollision(ref.note, ref.tab);
+  ref.tab.notes.sort((a, b) => a.col - b.col || a.stringIndex - b.stringIndex || Number(a.fret || 0) - Number(b.fret || 0));
+  commitHistoryChange();
+  renderAll();
+}
+
+function setSelectedNoteFret(value) {
+  updateSelectedNote(note => {
+    note.fret = Math.max(0, Math.min(36, Number.isFinite(value) ? Math.round(value) : 0));
+  });
+}
+
+function setSelectedNoteString(value) {
+  updateSelectedNote(note => {
+    note.stringIndex = Math.max(0, Math.min(STRINGS.length - 1, Number.isFinite(value) ? Math.round(value) : note.stringIndex));
+    note.gpString = STRINGS.length - 1 - note.stringIndex;
+  });
+}
+
+function moveSelectedNoteString(delta) {
+  const ref = findImportedNoteRef();
+  if (!ref) return;
+  setSelectedNoteString(ref.note.stringIndex + delta);
+}
+
+function moveSelectedNoteCol(delta) {
+  updateSelectedNote((note, measure, tab) => {
+    const maxCol = Math.max(0, (tab.cols || 1) - 1);
+    note.col = Math.max(0, Math.min(maxCol, Number(note.col || 0) + delta));
+  });
+}
+
+function toggleSelectedNoteFlag(flag) {
+  updateSelectedNote(note => {
+    note[flag] = !note[flag];
+    if (flag === 'dead' && note.dead) note.ghost = false;
+    if (flag === 'ghost' && note.ghost) note.dead = false;
+  });
+}
+
+function deleteSelectedNote() {
+  const ref = findImportedNoteRef();
+  if (!ref) return;
+  beginHistoryChange();
+  ref.tab.notes = ref.tab.notes.filter(note => importedNoteKey(note) !== selectedTabNote.noteKey);
+  ref.tab.noteCount = ref.tab.notes.length;
+  selectedTabNote = null;
+  commitHistoryChange();
+  renderAll();
+  setStatus(`Nota borrada del compas ${ref.measure.measure}.`);
+}
+
+function resolveImportedNoteCollision(note, tab) {
+  const sameSlot = (tab.notes || []).filter(other =>
+    other !== note &&
+    Number(other.col) === Number(note.col) &&
+    Number(other.stringIndex) === Number(note.stringIndex)
+  );
+  if (!sameSlot.length) return;
+  sameSlot.forEach(other => {
+    other.fret = note.fret;
+    other.midi = note.midi;
+    other.dead = note.dead;
+    other.ghost = note.ghost;
+    syncImportedNoteTechniques(other);
+    other.title = buildImportedNoteTitle(other);
+  });
+  tab.notes = (tab.notes || []).filter(other =>
+    other === note ||
+    !(Number(other.col) === Number(note.col) && Number(other.stringIndex) === Number(note.stringIndex))
+  );
+  tab.noteCount = tab.notes.length;
+}
+
+function normalizeImportedNoteAfterEdit(note) {
+  note.fret = note.dead ? note.fret : Math.max(0, Math.min(36, Number(note.fret || 0)));
+  note.stringIndex = Math.max(0, Math.min(STRINGS.length - 1, Number(note.stringIndex || 0)));
+  note.gpString = STRINGS.length - 1 - note.stringIndex;
+  note.midi = STRING_OPEN_MIDI[note.stringIndex] + Number(note.fret || 0);
+  syncImportedNoteTechniques(note);
+  note.title = buildImportedNoteTitle(note);
+}
+
+function syncImportedNoteTechniques(note) {
+  const techniqueMap = {
+    tieOrigin: 'tie',
+    tieDestination: 'tie',
+    legatoOrigin: 'legato',
+    legatoDestination: 'legato',
+    slideOrigin: 'slide',
+    bend: 'bend',
+    vibrato: 'vibrato',
+    trill: 'trill',
+    grace: 'grace',
+    harmonic: 'harmonic',
+    dead: 'dead',
+    ghost: 'ghost',
+    letRing: 'let-ring',
+    palmMute: 'palm-mute'
+  };
+  const managed = new Set(Object.values(techniqueMap));
+  const techniques = new Set((note.techniques || []).filter(tech => !managed.has(tech)));
+  Object.entries(techniqueMap).forEach(([flag, tech]) => {
+    if (note[flag]) techniques.add(tech);
+  });
+  note.techniques = [...techniques];
+  note.legatoLabel = note.legatoOrigin ? (note.legatoLabel || 'H/P') : '';
+}
+
 function updateMeasure(measureNumber, key, value) {
   updateMeasureEvent(measureNumber, 0, key, value);
 }
@@ -2083,9 +2791,14 @@ function syncScrollToCurrentMeasure() {
   document.querySelector('.measure-card.active')?.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
   const panel = document.getElementById('tab-panel');
   if (!panel) return;
-  const labelWidth = 28, slotsPerMeasure = 8, slotWidth = 28;
-  const measureLeft = labelWidth + ((currentMeasure - 1) * slotsPerMeasure * slotWidth);
-  const targetLeft = Math.max(0, measureLeft - (panel.clientWidth * 0.35));
+  const activeCells = [...panel.querySelectorAll('.tab-line .tab-cell.active-measure')];
+  if (!activeCells.length) return;
+  const panelRect = panel.getBoundingClientRect();
+  const left = Math.min(...activeCells.map(cell => cell.getBoundingClientRect().left));
+  const right = Math.max(...activeCells.map(cell => cell.getBoundingClientRect().right));
+  const measureCenter = (left + right) / 2;
+  const panelCenter = panelRect.left + (panel.clientWidth / 2);
+  const targetLeft = Math.max(0, panel.scrollLeft + measureCenter - panelCenter);
   panel.scrollTo({ left: targetLeft, top: panel.scrollTop, behavior: 'smooth' });
 }
 
@@ -2102,6 +2815,8 @@ function closeChordDialog() { document.getElementById('chord-dialog').close(); }
 
 function applyChordText() {
   const chords = parseChordText(document.getElementById('chord-text').value);
+  selectedTabNote = null;
+  resetHistory();
   arrangement = buildArrangement(chords);
   currentMeasure = 1;
   closeChordDialog();
@@ -2109,19 +2824,45 @@ function applyChordText() {
   setStatus(`${arrangement.length} acordes convertidos en ${arrangement.length} compases.`);
 }
 
-function readMusicXml(event) {
+function readScoreFile(event) {
   const file = event.target.files?.[0];
   if (!file) return;
-  loadMusicXmlFile(file);
+  loadScoreFile(file);
   event.target.value = '';
+}
+
+function readMusicXml(event) {
+  readScoreFile(event);
+}
+
+function loadScoreFile(file) {
+  if (/\.(gp|gpif)$/i.test(file.name)) {
+    loadGpFile(file);
+    return;
+  }
+  loadMusicXmlFile(file);
 }
 
 function loadMusicXmlFile(file) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      arrangement = buildArrangementFromMusicXml(String(reader.result || ''));
-      songTitle = extractMusicXmlTitle(String(reader.result || ''), file.name);
+      const xml = String(reader.result || '');
+      const musicXmlArrangement = buildArrangementFromMusicXml(xml);
+      if (hasImportedTabArrangement()) {
+        const applied = applyChordOverlayToImportedTab(musicXmlArrangement);
+        if (!applied) throw new Error('El MusicXML no trae acordes reconocibles para superponer');
+        resetHistory();
+        currentLibraryId = null;
+        currentMeasure = 1;
+        enterPlayMode();
+        setStatus(`${applied} compases recibieron acordes desde MusicXML sin reemplazar la TAB GP.`);
+        return;
+      }
+      selectedTabNote = null;
+      resetHistory();
+      arrangement = musicXmlArrangement;
+      songTitle = extractMusicXmlTitle(xml, file.name);
       currentLibraryId = null;
       resetBackingState();
       currentMeasure = 1;
@@ -2133,6 +2874,80 @@ function loadMusicXmlFile(file) {
     }
   };
   reader.readAsText(file);
+}
+
+function applyChordOverlayToImportedTab(chordArrangement) {
+  const byMeasure = new Map(chordArrangement.map(measure => [Number(measure.measure), measure]));
+  let applied = 0;
+  arrangement = arrangement.map((measure, index) => {
+    if (!measure.importedTab) return measure;
+    const chordMeasure = byMeasure.get(Number(measure.measure)) || chordArrangement[index];
+    const chords = chordMeasure
+      ? measureEvents(chordMeasure).filter(event => event.originalChord && event.originalChord !== 'rest')
+      : [];
+    if (!chords.length) return measure;
+    const nextEvents = chords.map(event => ({
+      ...makeChordEvent(event.originalChord, event.startSlot || 0),
+      format: event.format || 'strum',
+      pattern: event.pattern || 'ballad',
+      customMarks: Array.isArray(event.customMarks) ? event.customMarks.slice() : ['↓','','↓','↑','','↑','↓','↑']
+    }));
+    applied++;
+    return {
+      ...measure,
+      originalChord: nextEvents[0].originalChord,
+      events: nextEvents,
+      format: nextEvents[0].format,
+      pattern: nextEvents[0].pattern,
+      startSlot: nextEvents[0].startSlot,
+      customMarks: nextEvents[0].customMarks
+    };
+  });
+  return applied;
+}
+
+async function loadGpFile(file) {
+  try {
+    setStatus(`Leyendo ${file.name}...`);
+    const gpif = /\.gpif$/i.test(file.name)
+      ? await file.text()
+      : await readGpifFromGpFile(file);
+    const imported = buildArrangementFromGpif(gpif);
+    selectedTabNote = null;
+    resetHistory();
+    arrangement = imported.arrangement;
+    songTitle = cleanTitle(imported.title || file.name);
+    currentLibraryId = null;
+    resetBackingState();
+    currentMeasure = 1;
+    if (Number.isFinite(imported.capo)) {
+      capo = Math.max(0, Math.min(6, imported.capo));
+      document.getElementById('capo-select').value = String(capo);
+    }
+    if (Number.isFinite(imported.bpm) && imported.bpm > 0) {
+      document.getElementById('bpm-input').value = String(Math.round(imported.bpm));
+      backingOriginalBpm = Math.round(imported.bpm);
+    }
+    enterPlayMode();
+    setStatus(`${arrangement.length} compases GP importados desde "${imported.trackName || 'guitarra'}" con TAB real y tecnicas.`);
+  } catch (error) {
+    console.error(error);
+    setStatus('No pude leer ese archivo Guitar Pro/GPIF: ' + (error.message || error));
+  }
+}
+
+async function readGpifFromGpFile(file) {
+  await ensureJsZip();
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const gpifFile = zip.file('Content/score.gpif') || zip.file(/score\.gpif$/i)[0];
+  if (!gpifFile) throw new Error('El .gp no contiene Content/score.gpif');
+  return gpifFile.async('text');
+}
+
+async function ensureJsZip() {
+  if (window.JSZip) return;
+  await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+  if (!window.JSZip) throw new Error('No cargo JSZip para abrir archivos .gp');
 }
 
 function extractMusicXmlTitle(xml, fallback) {
@@ -2147,7 +2962,7 @@ function extractMusicXmlTitle(xml, fallback) {
 
 function cleanTitle(title) {
   return String(title || 'Arreglo de guitarra')
-    .replace(/\.(musicxml|xml|json)$/i, '')
+    .replace(/\.(musicxml|xml|gp|gpif|json)$/i, '')
     .replace(/[-_]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -2167,8 +2982,14 @@ function buildArrangementFromMusicXml(xml) {
     if (beatsEl)     beats = Number(beatsEl.textContent) || beats;
     if (beatTypeEl)  beatType = Number(beatTypeEl.textContent) || beatType;
     const measureDuration = divisions * beats * (4 / beatType);
-    const events = [...measureEl.querySelectorAll(':scope > harmony')].map(harmony => {
-      const offset = Number(harmony.querySelector('offset')?.textContent || 0);
+    const harmonyEls = [...measureEl.querySelectorAll(':scope > harmony')];
+    const hasExplicitOffsets = harmonyEls.some(harmony => harmony.querySelector('offset'));
+    const events = harmonyEls.map((harmony, harmonyIndex) => {
+      const offsetEl = harmony.querySelector('offset');
+      const inferredOffset = !hasExplicitOffsets && harmonyEls.length > 1
+        ? (measureDuration * harmonyIndex) / harmonyEls.length
+        : 0;
+      const offset = offsetEl ? Number(offsetEl.textContent || 0) : inferredOffset;
       const startSlot = Math.max(0, Math.min(7, Math.round((offset / measureDuration) * 8)));
       return makeChordEvent(chordFromHarmony(harmony), startSlot);
     }).filter(event => event.originalChord);
@@ -2220,12 +3041,407 @@ function chordKindSuffix(text, type) {
 }
 
 // ─────────────────────────────────────────────────────────────
+//  GUITAR PRO / GPIF IMPORT
+// ─────────────────────────────────────────────────────────────
+function buildArrangementFromGpif(gpif) {
+  const doc = new DOMParser().parseFromString(gpif, 'application/xml');
+  const parseError = doc.querySelector('parsererror');
+  if (parseError) throw new Error(parseError.textContent || 'GPIF invalido');
+
+  const tracks = [...doc.querySelectorAll('GPIF > Tracks > Track')];
+  const masterBars = [...doc.querySelectorAll('GPIF > MasterBars > MasterBar')];
+  const barsById = gpifElementMap(doc, 'GPIF > Bars > Bar');
+  const voicesById = gpifElementMap(doc, 'GPIF > Voices > Voice');
+  const beatsById = gpifElementMap(doc, 'GPIF > Beats > Beat');
+  const notesById = gpifElementMap(doc, 'GPIF > Notes > Note');
+  const rhythmsById = new Map([...doc.querySelectorAll('GPIF > Rhythms > Rhythm')]
+    .map(el => [Number(el.getAttribute('id')), parseGpifRhythm(el)]));
+  const trackOrder = parseGpifIdList(gpifText(doc, 'GPIF > MasterTrack > Tracks'));
+  const tempo = parseGpifTempo(doc);
+
+  const trackInfos = tracks.map((trackEl, fallbackIndex) => {
+    const id = Number(trackEl.getAttribute('id'));
+    const orderIndex = trackOrder.includes(id) ? trackOrder.indexOf(id) : fallbackIndex;
+    const name = gpifText(trackEl, 'Name') || `Track ${fallbackIndex + 1}`;
+    const type = gpifText(trackEl, 'InstrumentSet > Type');
+    const tuning = parseGpifTuning(trackEl);
+    const measures = collectGpifTrackMeasures({
+      orderIndex, masterBars, barsById, voicesById, beatsById, notesById, rhythmsById
+    });
+    const noteCount = measures.reduce((sum, measure) =>
+      sum + measure.beats.reduce((beatSum, beat) => beatSum + beat.noteIds.length, 0), 0);
+    const identity = `${name} ${type}`.toLowerCase();
+    return {
+      id, orderIndex, name, type, tuning, measures, noteCount,
+      isGuitar: /guitar|steelguitar|nylonguitar|acoustic|distortion|clean/.test(identity) && !/bass|drum|vocal|sax/.test(identity),
+      isTabInstrument: /guitar|bass|banjo|mandolin|ukulele/.test(identity) && !/drum|vocal|sax/.test(identity),
+      capo: parseGpifCapo(trackEl)
+    };
+  });
+
+  const selectedTrack = chooseGpifTrack(trackInfos);
+  if (!selectedTrack || !selectedTrack.noteCount) throw new Error('No encontre una pista de guitarra con notas TAB');
+
+  let cumulativeQuarters = 0;
+  const allNotes = [];
+  const arrangement = selectedTrack.measures.map((measureData, index) => {
+    const gridPerQuarter = chooseGpifGrid(measureData);
+    const cols = Math.max(1, Math.round(measureData.totalQuarters * gridPerQuarter));
+    const beats = measureData.beats.map(beat => ({
+      col: Math.max(0, Math.min(cols - 1, Math.round(beat.startQuarter * gridPerQuarter))),
+      durationCols: Math.max(1, Math.round(beat.durationQuarters * gridPerQuarter)),
+      rhythmLabel: beat.rhythmLabel,
+      startQuarter: beat.startQuarter,
+      durationQuarters: beat.durationQuarters
+    }));
+    const notes = [];
+    measureData.beats.forEach((beat, beatIndex) => {
+      const col = Math.max(0, Math.min(cols - 1, Math.round(beat.startQuarter * gridPerQuarter)));
+      const durationCols = Math.max(1, Math.round(beat.durationQuarters * gridPerQuarter));
+      beat.noteIds.forEach(noteId => {
+        const noteEl = notesById.get(noteId);
+        const parsed = parseGpifNote(noteEl, {
+          beatEl: beat.el,
+          measureIndex: index,
+          beatIndex,
+          col,
+          durationCols,
+          startQuarter: beat.startQuarter,
+          durationQuarters: beat.durationQuarters,
+          absoluteQuarter: cumulativeQuarters + beat.startQuarter,
+          stringCount: selectedTrack.tuning.length || 6
+        });
+        if (parsed) {
+          notes.push(parsed);
+          allNotes.push(parsed);
+        }
+      });
+    });
+    notes.sort((a, b) => a.col - b.col || a.stringIndex - b.stringIndex);
+    cumulativeQuarters += measureData.totalQuarters;
+    return {
+      measure: index + 1,
+      originalChord: 'TAB',
+      events: [makeChordEvent('TAB', 0)],
+      format: 'melody',
+      pattern: 'melody',
+      startSlot: 0,
+      customMarks: ['','','','','','','',''],
+      source: 'gpif',
+      importedTab: {
+        trackName: selectedTrack.name,
+        time: measureData.time,
+        totalQuarters: measureData.totalQuarters,
+        gridPerQuarter,
+        cols,
+        beats,
+        notes,
+        noteCount: notes.length
+      }
+    };
+  });
+
+  annotateGpifLegato(allNotes);
+
+  return {
+    title: gpifText(doc, 'GPIF > Score > Title'),
+    trackName: selectedTrack.name,
+    capo: selectedTrack.capo,
+    bpm: tempo,
+    arrangement
+  };
+}
+
+function gpifElementMap(doc, selector) {
+  return new Map([...doc.querySelectorAll(selector)]
+    .map(el => [Number(el.getAttribute('id')), el])
+    .filter(([id]) => Number.isFinite(id)));
+}
+
+function gpifText(root, selector) {
+  const target = selector ? root?.querySelector?.(selector) : root;
+  return target?.textContent?.trim() || '';
+}
+
+function gpifChild(el, tagName) {
+  return [...(el?.children || [])].find(child => child.tagName === tagName) || null;
+}
+
+function parseGpifIdList(text) {
+  return String(text || '')
+    .trim()
+    .split(/\s+/)
+    .map(value => Number(value))
+    .filter(Number.isFinite);
+}
+
+function parseGpifTempo(doc) {
+  const automations = [...doc.querySelectorAll('GPIF > MasterTrack > Automations > Automation')];
+  const tempoAutomation = automations.find(item => gpifText(item, 'Type').toLowerCase() === 'tempo');
+  const raw = gpifText(tempoAutomation, 'Value').split(/\s+/)[0];
+  const bpm = Number(raw);
+  return Number.isFinite(bpm) ? bpm : NaN;
+}
+
+function parseGpifTuning(trackEl) {
+  return parseGpifIdList(gpifText(trackEl, 'Property[name="Tuning"] > Pitches'));
+}
+
+function parseGpifCapo(trackEl) {
+  const capoValue = Number(gpifText(trackEl, 'Property[name="CapoFret"] > Fret'));
+  return Number.isFinite(capoValue) ? capoValue : 0;
+}
+
+function chooseGpifTrack(trackInfos) {
+  const byNotes = (a, b) => b.noteCount - a.noteCount;
+  return [...trackInfos.filter(track => track.isGuitar && track.noteCount)].sort(byNotes)[0]
+    || [...trackInfos.filter(track => track.isTabInstrument && track.noteCount)].sort(byNotes)[0]
+    || [...trackInfos.filter(track => track.noteCount)].sort(byNotes)[0];
+}
+
+function collectGpifTrackMeasures(context) {
+  let activeTime = '4/4';
+  return context.masterBars.map(masterBar => {
+    activeTime = gpifText(masterBar, 'Time') || activeTime;
+    const totalQuarters = gpifTimeToQuarters(activeTime);
+    const barIds = parseGpifIdList(gpifText(masterBar, 'Bars'));
+    const barId = barIds[context.orderIndex];
+    const barEl = context.barsById.get(barId);
+    const beats = [];
+    parseGpifIdList(gpifText(barEl, 'Voices'))
+      .filter(id => id >= 0)
+      .forEach((voiceId, voiceIndex) => {
+        const voiceEl = context.voicesById.get(voiceId);
+        let cursor = 0;
+        parseGpifIdList(gpifText(voiceEl, 'Beats'))
+          .filter(id => id >= 0)
+          .forEach(beatId => {
+            const beatEl = context.beatsById.get(beatId);
+            const rhythmRef = Number(beatEl?.querySelector('Rhythm')?.getAttribute('ref'));
+            const rhythm = context.rhythmsById.get(rhythmRef) || { quarters: 1, label: 'q' };
+            beats.push({
+              el: beatEl,
+              voiceIndex,
+              startQuarter: cursor,
+              durationQuarters: rhythm.quarters,
+              rhythmLabel: rhythm.label,
+              noteIds: parseGpifIdList(gpifText(beatEl, 'Notes'))
+            });
+            cursor += rhythm.quarters;
+          });
+      });
+    beats.sort((a, b) => a.startQuarter - b.startQuarter || a.voiceIndex - b.voiceIndex);
+    return { time: activeTime, totalQuarters, beats };
+  });
+}
+
+function gpifTimeToQuarters(time) {
+  const match = String(time || '4/4').match(/(\d+)\s*\/\s*(\d+)/);
+  if (!match) return 4;
+  const beats = Number(match[1]);
+  const beatType = Number(match[2]);
+  if (!beats || !beatType) return 4;
+  return beats * (4 / beatType);
+}
+
+function parseGpifRhythm(rhythmEl) {
+  const value = gpifText(rhythmEl, 'NoteValue') || 'Quarter';
+  const base = {
+    Whole: 4, Half: 2, Quarter: 1, Eighth: 0.5,
+    '16th': 0.25, '32nd': 0.125, '64th': 0.0625
+  }[value] || 1;
+  const dots = Number(rhythmEl.querySelector('AugmentationDot')?.getAttribute('count') || 0);
+  let quarters = base;
+  let add = base / 2;
+  for (let i = 0; i < dots; i++) {
+    quarters += add;
+    add /= 2;
+  }
+  const tuplet = rhythmEl.querySelector('PrimaryTuplet');
+  if (tuplet) {
+    const num = Number(tuplet.getAttribute('num'));
+    const den = Number(tuplet.getAttribute('den'));
+    if (num && den) quarters *= den / num;
+  }
+  return { quarters, label: gpifRhythmLabel(value, dots, tuplet) };
+}
+
+function gpifRhythmLabel(value, dots, tuplet) {
+  const label = {
+    Whole: 'w', Half: 'h', Quarter: 'q', Eighth: '8',
+    '16th': '16', '32nd': '32', '64th': '64'
+  }[value] || value;
+  return `${label}${dots ? '.'.repeat(dots) : ''}${tuplet ? 't' : ''}`;
+}
+
+function chooseGpifGrid(measureData) {
+  const values = [measureData.totalQuarters];
+  measureData.beats.forEach(beat => {
+    values.push(beat.startQuarter, beat.durationQuarters);
+  });
+  const candidates = [2, 4, 6, 8, 12, 16, 24, 32, 48];
+  return candidates.find(grid => values.every(value => Math.abs((value * grid) - Math.round(value * grid)) < 0.001)) || 24;
+}
+
+function parseGpifNote(noteEl, context) {
+  if (!noteEl) return null;
+  const fret = Number(gpifPropertyText(noteEl, 'Fret', 'Fret'));
+  const gpString = Number(gpifPropertyText(noteEl, 'String', 'String'));
+  if (!Number.isFinite(gpString)) return null;
+  const midi = Number(gpifPropertyText(noteEl, 'Midi', 'Number'));
+  const stringCount = Math.max(1, context.stringCount || 6);
+  const stringIndex = STRINGS.length - 1 - Math.max(0, Math.min(stringCount - 1, gpString));
+  if (stringIndex < 0 || stringIndex >= STRINGS.length) return null;
+  const note = {
+    id: Number(noteEl.getAttribute('id')),
+    measureIndex: context.measureIndex,
+    beatIndex: context.beatIndex,
+    col: context.col,
+    durationCols: context.durationCols,
+    startQuarter: context.startQuarter,
+    durationQuarters: context.durationQuarters,
+    absoluteQuarter: context.absoluteQuarter,
+    stringIndex,
+    gpString,
+    fret: Number.isFinite(fret) ? fret : '',
+    midi: Number.isFinite(midi) ? midi : null,
+    techniques: []
+  };
+  applyGpifTechniques(note, noteEl, context.beatEl);
+  note.title = buildImportedNoteTitle(note);
+  return note;
+}
+
+function gpifPropertyText(el, propertyName, childSelector) {
+  const prop = [...(el?.querySelectorAll('Properties > Property') || [])]
+    .find(item => item.getAttribute('name') === propertyName);
+  if (!prop) return '';
+  return childSelector ? gpifText(prop, childSelector) : prop.textContent.trim();
+}
+
+function applyGpifTechniques(note, noteEl, beatEl) {
+  const tie = gpifChild(noteEl, 'Tie');
+  if (tie) {
+    note.tieOrigin = tie.getAttribute('origin') === 'true';
+    note.tieDestination = tie.getAttribute('destination') === 'true';
+    note.techniques.push('tie');
+  }
+
+  const legato = gpifChild(noteEl, 'Hopo') || gpifChild(noteEl, 'Legato') || gpifChild(noteEl, 'Hammer') || gpifChild(noteEl, 'PullOff');
+  if (legato) {
+    note.legatoOrigin = legato.getAttribute('origin') !== 'false';
+    note.legatoDestination = legato.getAttribute('destination') === 'true';
+    note.techniques.push('legato');
+  }
+
+  const slide = gpifChild(noteEl, 'Slide') || gpifChild(noteEl, 'Slides');
+  if (slide) {
+    note.slideOrigin = true;
+    note.slideType = slide.getAttribute('type') || slide.textContent.trim();
+    note.techniques.push('slide');
+  }
+
+  if (gpifChild(noteEl, 'Bend'))       { note.bend = true; note.techniques.push('bend'); }
+  if (gpifChild(noteEl, 'Vibrato'))    { note.vibrato = true; note.techniques.push('vibrato'); }
+  if (gpifChild(noteEl, 'Trill'))      { note.trill = true; note.techniques.push('trill'); }
+  if (gpifChild(noteEl, 'Grace'))      { note.grace = true; note.techniques.push('grace'); }
+  if (gpifChild(noteEl, 'Harmonic'))   { note.harmonic = true; note.techniques.push('harmonic'); }
+
+  const noteProps = gpifPropertyNames(noteEl);
+  const beatProps = gpifPropertyNames(beatEl);
+  if (noteProps.has('DeadNote') || noteProps.has('Muted') || noteProps.has('Dead')) {
+    note.dead = true;
+    note.techniques.push('dead');
+  }
+  if (noteProps.has('GhostNote') || noteProps.has('Ghost')) {
+    note.ghost = true;
+    note.techniques.push('ghost');
+  }
+  if (noteProps.has('LetRing') || beatProps.has('LetRing') || gpifChild(noteEl, 'LetRing') || gpifChild(beatEl, 'LetRing')) {
+    note.letRing = true;
+    note.techniques.push('let-ring');
+  }
+  if (noteProps.has('PalmMute') || beatProps.has('PalmMute') || gpifChild(noteEl, 'PalmMute') || gpifChild(beatEl, 'PalmMute')) {
+    note.palmMute = true;
+    note.techniques.push('palm-mute');
+  }
+}
+
+function gpifPropertyNames(el) {
+  return new Set([...(el?.querySelectorAll('Properties > Property') || [])]
+    .map(item => item.getAttribute('name'))
+    .filter(Boolean));
+}
+
+function annotateGpifLegato(notes) {
+  const byString = new Map();
+  notes.forEach(note => {
+    if (!byString.has(note.stringIndex)) byString.set(note.stringIndex, []);
+    byString.get(note.stringIndex).push(note);
+  });
+  byString.forEach(stringNotes => {
+    stringNotes.sort((a, b) => a.absoluteQuarter - b.absoluteQuarter || a.col - b.col);
+    stringNotes.forEach((note, index) => {
+      if (!note.legatoOrigin) return;
+      const next = stringNotes.slice(index + 1).find(candidate => candidate.absoluteQuarter > note.absoluteQuarter);
+      if (!next || !Number.isFinite(Number(note.fret)) || !Number.isFinite(Number(next.fret))) {
+        note.legatoLabel = 'H/P';
+      } else if (Number(next.fret) > Number(note.fret)) {
+        note.legatoLabel = 'H';
+      } else if (Number(next.fret) < Number(note.fret)) {
+        note.legatoLabel = 'P';
+      } else {
+        note.legatoLabel = 'H/P';
+      }
+      note.title = buildImportedNoteTitle(note);
+    });
+  });
+}
+
+function buildImportedNoteTitle(note) {
+  const labels = [];
+  if (note.tieOrigin) labels.push('ligadura sale');
+  if (note.tieDestination) labels.push('ligadura entra');
+  if (note.legatoLabel) labels.push(note.legatoLabel === 'H' ? 'hammer-on' : note.legatoLabel === 'P' ? 'pull-off' : 'legato');
+  if (note.slideOrigin) labels.push(`slide${note.slideType ? ` ${note.slideType}` : ''}`);
+  if (note.bend) labels.push('bend');
+  if (note.vibrato) labels.push('vibrato');
+  if (note.trill) labels.push('trill');
+  if (note.letRing) labels.push('let ring');
+  if (note.palmMute) labels.push('palm mute');
+  if (note.dead) labels.push('dead note');
+  if (note.ghost) labels.push('ghost note');
+  const base = `Cuerda ${note.stringIndex + 1}, traste ${note.fret}`;
+  return labels.length ? `${base} · ${labels.join(', ')}` : base;
+}
+
+// ─────────────────────────────────────────────────────────────
 //  BPM HELPERS
 // ─────────────────────────────────────────────────────────────
 function getBpm() {
   return Math.max(35, Math.min(180, Number(document.getElementById('bpm-input')?.value || 70)));
 }
-function measureSeconds() { return (60 / getBpm()) * 4; }
+function measureQuarterLength(measure) {
+  return Math.max(0.25, Number(measure?.importedTab?.totalQuarters || 4));
+}
+function measureSeconds(measure) { return (60 / getBpm()) * measureQuarterLength(measure); }
+function elapsedSecondsUntilMeasure(measureIdx) {
+  let seconds = 0;
+  for (let i = 0; i < measureIdx; i++) seconds += measureSeconds(arrangement[i]);
+  return seconds;
+}
+function measurePositionAtElapsed(startMeasureIdx, elapsedSec) {
+  const endIdx = getEffectiveEndIdx();
+  let remaining = Math.max(0, elapsedSec);
+  for (let idx = startMeasureIdx; idx <= endIdx; idx++) {
+    const duration = measureSeconds(arrangement[idx]);
+    if (remaining < duration || idx === endIdx) {
+      return { measureIdx: idx, withinMeasureSec: Math.min(remaining, duration) };
+    }
+    remaining -= duration;
+  }
+  return { measureIdx: startMeasureIdx, withinMeasureSec: 0 };
+}
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 let _toastTimer = null;
@@ -2310,7 +3526,7 @@ function checkBackingBpm() {
   if (getBpm() !== backingOriginalBpm && backingEnabled) forceDisableBacking();
   updateBackingSection();
 }
-function slotSeconds()    { return measureSeconds() / 8; }
+function slotSeconds(measure)    { return measureSeconds(measure) / measureColumnCount(measure); }
 
 // ─────────────────────────────────────────────────────────────
 //  BACKING TRACK — stored as raw blob, decoded to AudioBuffer
@@ -2319,6 +3535,7 @@ function slotSeconds()    { return measureSeconds() / 8; }
 function resetBackingState() {
   stopBackingNode();
   backingAudioBuffer = null;
+  backingDecodePromise = null;
   backingTrackName = '';
   backingTrackUrl = '';
   backingTrackBlob = null;
@@ -2353,6 +3570,28 @@ async function decodeBackingBlob(blob) {
   }
   if (backingOriginalBpm <= 0) backingOriginalBpm = getBpm();
   setStatus(`Backing decodificado (${backingAudioBuffer.duration.toFixed(1)}s). Ajusta los offsets y guarda.`);
+}
+
+async function ensureBackingDecoded() {
+  if (!backingTrackBlob) return false;
+  if (backingAudioBuffer) return true;
+  if (!backingDecodePromise) {
+    backingDecodePromise = decodeBackingBlob(backingTrackBlob)
+      .catch(error => {
+        setStatus('No pude decodificar el backing track: ' + error.message);
+        return false;
+      })
+      .finally(() => {
+        backingDecodePromise = null;
+      });
+  }
+  await backingDecodePromise;
+  return !!backingAudioBuffer;
+}
+
+function backingFilePositionForMeasure(startMeasureIdx) {
+  if (startMeasureIdx <= 0) return backingStartSec;
+  return backingStartSec + tabDelaySec + elapsedSecondsUntilMeasure(startMeasureIdx);
 }
 
 /**
@@ -2394,6 +3633,8 @@ function loadBackingTrack(event) {
     return;
   }
   if (backingTrackUrl) URL.revokeObjectURL(backingTrackUrl);
+  stopBackingNode();
+  backingAudioBuffer = null;
   backingTrackBlob = file;
   backingTrackUrl = URL.createObjectURL(file);
   backingTrackName = file.name;
@@ -2401,9 +3642,11 @@ function loadBackingTrack(event) {
   const audio = document.getElementById('backing-audio');
   audio.src = backingTrackUrl;
   audio.load();
-  // Decode into AudioBuffer in the background
-  decodeBackingBlob(file).catch(e => {
+  // Decode into AudioBuffer in the background, but let Play await it if needed.
+  backingDecodePromise = decodeBackingBlob(file).catch(e => {
     setStatus('No pude decodificar el backing track: ' + e.message);
+  }).finally(() => {
+    backingDecodePromise = null;
   });
   setStatus(`Backing cargado: ${file.name}. Ajusta "Backing desde" y "Tab entra en" para sincronizar.`);
   event.target.value = '';
@@ -2574,7 +3817,11 @@ function loadScript(src) {
 // ─────────────────────────────────────────────────────────────
 function scheduleMeasureNotes(measure, startAudioTime, fromSlot = 0) {
   if (!measure) return;
-  const ss = slotSeconds();
+  if (measure.importedTab) {
+    scheduleImportedTabNotes(measure, startAudioTime, fromSlot);
+    return;
+  }
+  const ss = slotSeconds(measure);
   const played = new Set();
   for (let slot = 0; slot < 8; slot++) {
     if (slot < fromSlot) continue;   // skip already-played slots when resuming
@@ -2589,6 +3836,24 @@ function scheduleMeasureNotes(measure, startAudioTime, fromSlot = 0) {
     if (event.format === 'strum') scheduleStrum(event, pattern.marks[local] || '↓', hitTime);
     else scheduleSingleString(event, pattern, local, hitTime);
   }
+}
+
+function scheduleImportedTabNotes(measure, startAudioTime, fromCol = 0) {
+  const tab = measure.importedTab;
+  if (!sfInstrument || !sfReady || !tab?.notes?.length || tabMuted) return;
+  const colSeconds = measureSeconds(measure) / Math.max(1, tab.cols || 1);
+  tab.notes.forEach(note => {
+    if (note.col < fromCol) return;
+    if (note.tieDestination && !note.legatoDestination && !note.legatoOrigin) return;
+    const midi = Number.isFinite(note.midi)
+      ? note.midi
+      : STRING_OPEN_MIDI[note.stringIndex] + Number(note.fret || 0);
+    if (!Number.isFinite(midi)) return;
+    const time = startAudioTime + ((note.col - fromCol) * colSeconds);
+    const duration = Math.max(0.08, (note.durationCols || 1) * colSeconds * (note.palmMute || note.dead ? 0.45 : 0.92));
+    const gain = note.dead ? 0.14 : note.ghost || note.legatoDestination ? 0.34 : 0.62;
+    sfInstrument.play(midi, time, { duration, gain });
+  });
 }
 
 function scheduleStrum(event, mark, time) {
@@ -2698,13 +3963,14 @@ function toggleMuteTab() {
  */
 function buildScheduleMap(originTime, fromIdx) {
   const map = [];
-  const ms  = measureSeconds();
   const endIdx = getEffectiveEndIdx();
+  let audioStartTime = originTime;
   for (let i = fromIdx; i <= endIdx; i++) {
     map.push({
       measureIdx: i,
-      audioStartTime: originTime + ((i - fromIdx) * ms)
+      audioStartTime
     });
+    audioStartTime += measureSeconds(arrangement[i]);
   }
   return map;
 }
@@ -2729,8 +3995,6 @@ function schedulerTick(rafTimestamp) {
   // ── VISUAL UPDATE ──────────────────────────────────────────
   if (rafTimestamp - lastVisualUpdateMs >= VISUAL_INTERVAL_MS) {
     lastVisualUpdateMs = rafTimestamp;
-    const ms  = measureSeconds();
-    const ss  = ms / 8;
 
     // elapsedSec is relative to when the TAB starts (schedStartAudioTime = tabOriginAudioTime)
     // During tabDelaySec the tab hasn't started yet — keep cursor hidden
@@ -2743,9 +4007,13 @@ function schedulerTick(rafTimestamp) {
       return;
     }
 
-    const rawIdx      = Math.floor(elapsedSec / ms);
-    const absoluteIdx = schedStartMeasure + rawIdx;
-    const clampedIdx  = Math.max(schedStartMeasure, Math.min(getEffectiveEndIdx(), absoluteIdx));
+    const activePos = scheduleMap.findIndex((entry, index) => {
+      const next = scheduleMap[index + 1];
+      const end = next?.audioStartTime ?? entry.audioStartTime + measureSeconds(arrangement[entry.measureIdx]);
+      return now >= entry.audioStartTime && now < end;
+    });
+    const activeEntry = activePos >= 0 ? scheduleMap[activePos] : scheduleMap[scheduleMap.length - 1];
+    const clampedIdx  = Math.max(schedStartMeasure, Math.min(getEffectiveEndIdx(), activeEntry?.measureIdx ?? schedStartMeasure));
 
     // ── Measure highlight ──
     if (currentMeasure !== clampedIdx + 1) {
@@ -2758,9 +4026,10 @@ function schedulerTick(rafTimestamp) {
     }
 
     // ── Beat cursor on active card ──
-    const measureStartTime = schedStartAudioTime + (rawIdx * ms);
+    const measureStartTime = activeEntry?.audioStartTime ?? schedStartAudioTime;
+    const currentDuration  = measureSeconds(arrangement[clampedIdx]);
     const withinMeasure    = Math.max(0, now - measureStartTime);
-    const slotPct          = Math.min(withinMeasure / ms, 1); // 0..1 across the full measure
+    const slotPct          = Math.min(withinMeasure / currentDuration, 1); // 0..1 across the full measure
     const cursor = document.getElementById(`beat-cursor-${clampedIdx + 1}`);
     if (cursor) {
       const barW = cursor.parentElement.offsetWidth;
@@ -2778,7 +4047,7 @@ function schedulerTick(rafTimestamp) {
     // All measures are scheduled; wait until the last one finishes
     if (!scheduleMap.length) { stopPlay(); return; } // rango vacío/imposible
     const lastEntry = scheduleMap[scheduleMap.length - 1];
-    const endTime   = lastEntry.audioStartTime + measureSeconds();
+    const endTime   = lastEntry.audioStartTime + measureSeconds(arrangement[lastEntry.measureIdx]);
     if (now >= endTime) {
       if (loopEnabled) {
         // Restart from savedStartMeasure
@@ -2801,6 +4070,17 @@ function schedulerTick(rafTimestamp) {
 
 async function startPlayback() {
   await ensureAudio();
+  if (backingEnabled) {
+    const ready = await ensureBackingDecoded();
+    if (!ready) {
+      backingEnabled = false;
+      const btn = document.getElementById('backing-toggle-btn');
+      const section = document.getElementById('backing-section');
+      if (btn) btn.classList.remove('active');
+      if (section) section.classList.remove('visible');
+      updateBackingSection();
+    }
+  }
   restoreGuitarGain(); // ensure gain is ON after a previous stop
   playing = true;
   paused  = false;
@@ -2845,10 +4125,7 @@ async function startPlayback() {
   // Backing: si arranca desde el compás 1, reproduce desde backingStartSec.
   // Si arranca desde compás N, salta al punto correspondiente en el archivo.
   if (backingAudioBuffer && backingEnabled) {
-    const backingFilePos = isFromStart
-      ? backingStartSec
-      : backingStartSec + tabDelaySec + (startMeasureIdx * measureSeconds());
-    startBackingAt(backingFilePos, originAudioTime);
+    startBackingAt(backingFilePositionForMeasure(startMeasureIdx), originAudioTime);
   }
 
   schedulerRafId = requestAnimationFrame(schedulerTick);
@@ -2912,14 +4189,13 @@ async function togglePlay() {
 
     const LEAD_IN = 0.05;
     const nowAudio = Tone.now() + LEAD_IN;
-    const ms = measureSeconds();
-    const ss = slotSeconds();
 
     // Figure out where we paused
-    const elapsedMeasures = Math.floor(pausedElapsedSec / ms);
-    const fromMeasureIdx  = Math.min(schedStartMeasure + elapsedMeasures, arrangement.length - 1);
-    const withinMeasureSec = pausedElapsedSec - elapsedMeasures * ms;
-    const fromSlot = Math.min(7, Math.floor(withinMeasureSec / ss));
+    const position = measurePositionAtElapsed(schedStartMeasure, pausedElapsedSec);
+    const fromMeasureIdx = Math.min(position.measureIdx, arrangement.length - 1);
+    const withinMeasureSec = position.withinMeasureSec;
+    const currentCols = measureColumnCount(arrangement[fromMeasureIdx]);
+    const fromSlot = Math.min(currentCols - 1, Math.floor(withinMeasureSec / slotSeconds(arrangement[fromMeasureIdx])));
 
     // Reset scheduler anchors so visuals stay correct
     schedStartMeasure   = fromMeasureIdx;
@@ -3026,7 +4302,7 @@ async function attachBackingBlob(blob, name) {
 // ─────────────────────────────────────────────────────────────
 function arrangementDocument() {
   return {
-    version: 3,
+    version: 4,
     id: currentLibraryId,
     title: songTitle,
     savedAt: new Date().toISOString(),
@@ -3113,6 +4389,8 @@ async function loadLibrarySong(id) {
     const storedBacking = await loadBackingBlob(id);
     if (storedBacking) await attachBackingBlob(storedBacking, backingTrackName);
   } catch (error) { console.error(error); }
+  selectedTabNote = null;
+  resetHistory();
   arrangement    = item.arrangement || [];
   currentMeasure = 1;
   document.getElementById('capo-select').value        = String(capo);
@@ -3177,6 +4455,8 @@ function loadJsonFile(file) {
       backingStartSec = Number(data.backingStartSec ?? data.backingOffset ?? 0);
       tabDelaySec   = Number(data.tabDelaySec ?? 0);
       backingTrackName = data.backingTrackName || '';
+      selectedTabNote = null;
+      resetHistory();
       arrangement   = data.arrangement;
       currentMeasure = 1;
 
